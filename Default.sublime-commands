@@ -1,0 +1,11 @@
+[
+  {
+    "caption": "SublimeImportJS: replaces selection expression with imports",
+    "command": "import_es6"
+  },
+  {
+    "caption": "SublimeImportJS: import selected expressions",
+    "command": "import_es6",
+    "args": {"insert": true}
+  }
+]
