@@ -1,7 +1,8 @@
-# Sublime Import JS
-A Sublime Text Plugin that helps you to import your modules.
+# Simple Import JS
+A Simple Sublime Text Plugin that helps you to import your modules.
 
-![example gif](https://raw.github.com/vini175pa/sublime-import-js/master/example.gif)
+
+![example gif](https://raw.githubusercontent.com/vini175pa/simple-import-js/master/example.gif)
 
 # Examples
 NOTE! Currently this plugin does not search for files in the project. It 'just' converts expressions in js imports ( import or require).
