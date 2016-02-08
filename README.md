@@ -63,6 +63,14 @@ becomes...
 	import Example from './Example.jsx';
 	import {A} from 'B';
 	
+	
+# Installation
+Just clone this repository in your packages folder and add the key bindings
+
+ - Use `Ctrl+Shift+P` and find `Browse Packages`. Press ENTER and it will open the packages folder.
+ - Clone this repository `git clone https://github.com/vini175pa/simple-import-js.git`
+ - [Add the key bindings](#key-binding)
+	
 # Key Binding
 Just add this in your **Preferences > Key Bindings - User**
 
