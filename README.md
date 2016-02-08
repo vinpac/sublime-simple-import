@@ -15,7 +15,7 @@ This can be either a path, a name or the variable that will be defined for the m
 
 `./stores/BaseStore`  ->  `import BaseStore from './stores/BaseStore'`
 
-#### module 
+#### module
 (Optional) You can set the module to be imported. It can be a path or a simple module.
 
 `ReactDOM:react-dom` -> `import ReactDOM from 'react-dom'`
@@ -24,15 +24,24 @@ This can be either a path, a name or the variable that will be defined for the m
 
 #### type
 (Optional) Sometimes you dont want to use ES6 import, so just add ':$' at the end and it will be converted to `require` instead of import.
- 
+
   `ReactDOM:react-dom:$` -> `var ReactDOM = require('react-dom');`
 
-#### Double separator
-If you put a double separator instead of one, it will import a propertie of the module.
+#### Import method
+If you put "::" between the name and the module, it will import a method or a propertie of it.
 
 `ActonTypes::./constants/AppConstants` -> `import {ActonTypes} from './constants/AppConstants'`
 
 `ActonTypes::./constants/AppConstants:$` -> `var ActionTypes = require('./constants/AppConstants').ActionTypes`
+
+#### Multiple at once
+	You can import as many modules you want at once, just separate them with a semicolon.
+
+	`React;./Example.jsx;A::B`
+	becomes...
+	`import React from 'react';
+	import Example from './Example.jsx';
+	import {A} from 'B';`
 
 # Notes
 This project is just starting. I know it doesn't does much yet, but I hope it will become a bigger plugin in the near future. Feel free to contribute, to criticize the code lol. :)

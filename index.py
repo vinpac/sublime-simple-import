@@ -1,14 +1,37 @@
 import sublime, sublime_plugin, re
 
+IMPORT_ES6_REGEX = "import[\s]+(?P<isFromModule>\{)?[\s]*(?P<names>(([\s]*,[\s]*|[^\s\{\}\.])+))+[\s]*(?P<isFromModule2>\})?[\s]+from[\s]+(\'|\")(?P<module>.+)(\'|\")"
+ANY_IMPORT_BY_NAME_REGEX = "(import[\s]+{0}[\s]+from[\s]+(\'|\").+(\'|\")|(var[\s]+)?{0}[\s]*\=[\s]*require\([\s]*(\'|\").+(\'|\")[\s]*\)([\s]*\.[\s]*{0})?)[\s]*;?"
+MODULE_SEPARATOR = ";"
+
+
 class Importation:
+
+	@staticmethod
+	def isImportWord(word):
+		match = re.match(r'{0}'.format(IMPORT_ES6_REGEX), word.strip())
+		return match
+
 	def __init__(self, word):
 
 		self.fromModule = False
 		self.alternative = False
 
-		word = word.strip().replace(" ", "")
+		word = word.strip()
+
+		isImport = Importation.isImportWord(word)
+		if isImport:
+			isImport = isImport.groupdict()
+			self.name = self.parseName(isImport["names"])
+			self.module = isImport["module"]
+			self.fromModule = isImport["isFromModule"]
+			self.alternative = word.split(":")[-1] == "$"
+			return
+		else:
+			word = word.replace(" ", "")
 
 		self.word = word
+
 
 		if ":" in word:
 
@@ -34,6 +57,13 @@ class Importation:
 	def parseName(self, name):
 		if("/" in name):
 			name = name.split("/")[-1]
+
+		if("-" in name):
+			words = name.split("-")
+			name = words[0]
+			for word in words[1:]:
+				name += word[0].upper() + word[1:]
+
 
 		if("." in name):
 			name = name.split(".")[0]
@@ -69,10 +99,6 @@ class Importation:
 		else:
 			return self.getEs6Import()
 
-
-
-
-
 class ReplaceCommand(sublime_plugin.TextCommand):
     def run(self, edit, characters, start=0, end=False):
       if(end == False):
@@ -82,21 +108,28 @@ class ReplaceCommand(sublime_plugin.TextCommand):
 class ImportEs6Command(sublime_plugin.TextCommand):
 	def run(self, edit, **args):
 
+
+		#project_root = self.view.window().extract_variables()['folder']
+
 		insertMode = args.get('insert')
 
 		selections = self.view.sel();
-		imports = ""
-		begin = selections[0].begin()
-
 
 		# if only one expression was selected
-		shouldReplaceForName = selections[0] == selections[-1]
-		uniqueImportObject = False
+		uniqueImport = selections[0] == selections[-1]
 
+		selectionIndex = 0;
 		for selection in selections:
-			words = (self.view.substr(selection)).split(",")
+
+			imports = ""
+			words = (self.view.substr(selection)).split(MODULE_SEPARATOR)
+
+			if not words[-1]:
+				words = words[:-1]
+
 			if len(words) > 1:
-				shouldReplaceForName = False
+				uniqueImport = False
+
 
 			for word in words:
 
@@ -104,28 +137,49 @@ class ImportEs6Command(sublime_plugin.TextCommand):
 					continue
 
 				importObject = Importation(word)
-				imports += importObject.toString()
 
-				# not the last one
-				if word != words[-1] or insertMode:
+				alreadyImportedObject = self.findImportationByName(importObject.name)
+				alreadyImported = self.isAlreadyImported(alreadyImportedObject)
+
+
+				if alreadyImported:
+					self.view.run_command("replace", {"characters": importObject.toString(), "start": alreadyImportedObject.begin(), "end": alreadyImportedObject.end()})
+				else:
+					imports += importObject.toString()
+
+				if uniqueImport and (insertMode or alreadyImported):
+					selection = self.view.sel()[selectionIndex]
+					self.view.run_command("replace", {"characters": importObject.name, "start": selection.begin(), "end": selection.end()})
+
+				if alreadyImported:
+					continue
+
+				if imports != "":
 					imports += "\n"
 
-				if shouldReplaceForName:
-					uniqueImportObject = importObject
-
-
-			if(insertMode):
-				self.view.insert(edit, 0, imports)
-			else:
-				self.view.run_command("replace", {"characters": imports, "start": selection.begin(), "end": selection.end()})
+			if imports.strip() != "":
+				if(insertMode):
+					self.view.insert(edit, 0, imports)
+				else:
+					self.view.run_command("replace", {"characters": imports, "start": selection.begin(), "end": selection.end()})
+			selectionIndex += 1
 			imports = ""
-
-		# If only one expression was selected it replaces the expression with the name of the importation
-		if shouldReplaceForName and uniqueImportObject != False and insertMode:
-			self.view.run_command("replace", {"characters": uniqueImportObject.name, "start": selections[0].begin(), "end": selections[0].end()})
 
 		goTo = self.view.sel()[0].end()
 		self.view.sel().clear()
 		self.view.sel().add(sublime.Region(goTo))
+
+
+
+	def findImportationByName(self, word):
+		return self.view.find(r"{0}".format(ANY_IMPORT_BY_NAME_REGEX.format(word)), 0);
+
+	def isAlreadyImported(self, word):
+		if isinstance(word, sublime.Region):
+			region = word
+		else:
+			region = self.findImportationByName(word)
+		return region.begin() != -1 or region.end() != -1
+
 
 
