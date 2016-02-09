@@ -45,4 +45,4 @@ If you put "::" between the name and the module, it will import a method or a pr
 	import {A} from 'B';`
 
 # Notes
-This project is just starting. I know it doesn't does much yet, but I hope it will become a bigger plugin in the near future. Feel free to contribute, to criticize the code lol. :)
+PressThis project is just starting. I know it doesn't does much yet, but I hope it will become a bigger plugin in the near future. Feel free to contribute, to criticize the code lol. :)

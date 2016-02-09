@@ -1,9 +1,41 @@
-import sublime, sublime_plugin, re
+import sublime, sublime_plugin, re, os
 
 IMPORT_ES6_REGEX = "import[\s]+(?P<isFromModule>\{)?[\s]*(?P<names>(([\s]*,[\s]*|[^\s\{\}\.])+))+[\s]*(?P<isFromModule2>\})?[\s]+from[\s]+(\'|\")(?P<module>.+)(\'|\")"
-ANY_IMPORT_BY_NAME_REGEX = "(import[\s]+{0}[\s]+from[\s]+(\'|\").+(\'|\")|(var[\s]+)?{0}[\s]*\=[\s]*require\([\s]*(\'|\").+(\'|\")[\s]*\)([\s]*\.[\s]*{0})?)[\s]*;?"
-MODULE_SEPARATOR = ";"
 
+# Regex to ecounter an import or a require by its variable name
+# double brackets are turned on one in str.format
+ANY_IMPORT_BY_NAME_REGEX = "(import[\s]+\{{?[\s]*{name}[\s]*\}}?[\s]+from[\s]+(\'|\").+(\'|\")|((var[\s]+)?){name}[\s]*\=[\s]*require\([\s]*(\'|\").+(\'|\")[\s]*\)([\s]*\.[\s]*\w+)?)([\s]*;)?"
+
+
+MODULE_SEPARATOR = ";"
+NAME_MODULE_SEPARATOR = ":"
+IMPORT_FROM_SEPARATOR = "::"
+
+excluded_directories = ["./.git", "node_modules"]
+excluded_directories = [os.path.normpath(path) for path in excluded_directories if (path != "." or path != "./")]
+
+excluded_extensions = ["js", "jsx"]
+
+PENDING_STATUS = "pending"
+RESOLVED_STATUS = "resolved"
+
+class ImportSelection:
+	def __init__(self, region, index=0, importObjs=[]):
+		self.region = region
+		self.importObjs = importObjs
+		self.index = index
+
+	def addImportObj(self, importObj):
+		self.importObjs.append(importObj)
+
+	def isPending(self):
+		isPending = False
+		for x in self.importObjs:
+			if x.isPending():
+				isPending = True
+				break
+
+		return isPending
 
 class Importation:
 
@@ -12,10 +44,14 @@ class Importation:
 		match = re.match(r'{0}'.format(IMPORT_ES6_REGEX), word.strip())
 		return match
 
-	def __init__(self, word):
+	def __init__(self, word, selectionObj):
 
+		self.status = PENDING_STATUS
+		self.searchResults = []
+		self.selectionObj = selectionObj
 		self.fromModule = False
 		self.alternative = False
+		self.searchForFiles = False
 
 		word = word.strip()
 
@@ -48,13 +84,37 @@ class Importation:
 			if not word[1] or word[1] == "$":
 				word[1] = word[0]
 
+
+
+
 			self.name = self.parseName(word[0])
 			self.module = self.parseModule(word[1])
+
 		else:
 			self.name = self.parseName(word)
 			self.module = self.parseModule(word)
 
+	def isPending(self):
+		return self.status == PENDING_STATUS
+
+	def isResolved(self):
+		return self.status == RESOLVED_STATUS
+
+	def resolve(self):
+		self.status = RESOLVED_STATUS
+
+	def setResults(self, searchResults):
+		self.searchResults = searchResults
+
 	def parseName(self, name):
+		if("@" in name):
+
+			if name[0] == "@":
+				self.searchForFiles = True
+				self.searchFor = name[1:]
+
+			name = name.replace("@", "")
+
 		if("/" in name):
 			name = name.split("/")[-1]
 
@@ -70,7 +130,28 @@ class Importation:
 
 		return name
 
+	def setModule(self, module, isPath=False):
+		if(isPath):
+			self.module = self.parsePath(module)
+		else:
+			self.module = module
+
+
+	def parsePath(self, path):
+
+		if path[:2] == "./" or path[:3] == "../":
+			return path
+		else:
+			return "./" + path
+
 	def parseModule(self, module):
+		if("@" in module):
+			if module[0] == "@":
+				self.searchForFiles = True
+				self.searchFor = module[1:]
+
+			module = module.replace("@", "")
+
 		if("/" not in module):
 			module = module.lower()
 
@@ -93,7 +174,7 @@ class Importation:
 
 		return "var {0} = require(\"{1}\"){2}".format(self.name, self.module, end)
 
-	def toString(self):
+	def __str__(self):
 		if(self.alternative):
 			return self.getRequire()
 		else:
@@ -105,30 +186,44 @@ class ReplaceCommand(sublime_plugin.TextCommand):
         end = self.view.size()
       self.view.replace(edit,sublime.Region(start, end), characters)
 
+class InsertAtCommand(sublime_plugin.TextCommand):
+    def run(self, edit, characters, start=0):
+      self.view.insert(edit, start, characters)
+
+
 class ImportEs6Command(sublime_plugin.TextCommand):
+
 	def run(self, edit, **args):
 
+		self.project_root = self.view.window().extract_variables()['folder']
+		self.project_path_length = len(self.project_root)
 
-		#project_root = self.view.window().extract_variables()['folder']
+		self.pendingImports = []
 
-		insertMode = args.get('insert')
+		self.viewPath = "" if not self.view.file_name() else os.path.relpath(self.view.file_name(), self.project_root)
+		self.viewRelativeDir = os.path.dirname(self.viewPath) if self.viewPath != "." else ""
+		self.filename = os.path.basename(self.viewPath)
+
+		self.insertMode = args.get('insert')
 
 		selections = self.view.sel();
+		self.selectionsPending = {}
 
 		# if only one expression was selected
-		uniqueImport = selections[0] == selections[-1]
+		self.uniqueImport = selections[0] == selections[-1]
 
 		selectionIndex = 0;
 		for selection in selections:
 
-			imports = ""
+			self.imports = ""
+			selectionObj =  ImportSelection(selection, selectionIndex)
 			words = (self.view.substr(selection)).split(MODULE_SEPARATOR)
 
 			if not words[-1]:
 				words = words[:-1]
 
 			if len(words) > 1:
-				uniqueImport = False
+				self.uniqueImport = False
 
 
 			for word in words:
@@ -136,43 +231,74 @@ class ImportEs6Command(sublime_plugin.TextCommand):
 				if not word:
 					continue
 
-				importObject = Importation(word)
+				word = word.strip()
 
-				alreadyImportedObject = self.findImportationByName(importObject.name)
-				alreadyImported = self.isAlreadyImported(alreadyImportedObject)
+				importObj = Importation(word, selectionObj)
 
+				selectionObj.addImportObj(importObj)
 
-				if alreadyImported:
-					self.view.run_command("replace", {"characters": importObject.toString(), "start": alreadyImportedObject.begin(), "end": alreadyImportedObject.end()})
-				else:
-					imports += importObject.toString()
+				if importObj.searchForFiles:
+					searchResults = self.searchFiles(importObj.searchFor)
 
-				if uniqueImport and (insertMode or alreadyImported):
-					selection = self.view.sel()[selectionIndex]
-					self.view.run_command("replace", {"characters": importObject.name, "start": selection.begin(), "end": selection.end()})
+					importObj.setResults(searchResults)
 
-				if alreadyImported:
-					continue
+					if len(searchResults) > 1:
+						self.pendingImports.append(importObj)
+						self.view.show_popup_menu(searchResults, self.handleClickItem)
+						continue
+					elif len(searchResults) == 1:
+						importObj.setModule(self.parseFileName(os.path.relpath(searchResults[0], self.viewRelativeDir)), True)
 
-				if imports != "":
-					imports += "\n"
+				self.handleImportObj(importObj, selectionObj)
 
-			if imports.strip() != "":
-				if(insertMode):
-					self.view.insert(edit, 0, imports)
-				else:
-					self.view.run_command("replace", {"characters": imports, "start": selection.begin(), "end": selection.end()})
 			selectionIndex += 1
-			imports = ""
+			self.resolve(selectionObj)
 
-		goTo = self.view.sel()[0].end()
-		self.view.sel().clear()
-		self.view.sel().add(sublime.Region(goTo))
+	def handleClickItem(self, index):
+		importObj = self.pendingImports.pop(0)
 
+		importObj.setModule(self.parseFileName(os.path.relpath(importObj.searchResults[index], self.viewRelativeDir)), True)
+
+		self.handleImportObj(importObj, importObj.selectionObj)
+		self.resolve(importObj.selectionObj)
+
+	def handleImportObj(self, importObj, selectionObj):
+
+		alreadyImportedObject = self.findImportationByName(importObj.name)
+		alreadyImported = self.isAlreadyImported(alreadyImportedObject)
+
+		importObj.resolve()
+
+		region = selectionObj.region
+
+		if alreadyImported:
+			self.view.run_command("replace", {"characters": importObj.__str__(), "start": alreadyImportedObject.begin(), "end": alreadyImportedObject.end()})
+		else:
+			self.imports += importObj.__str__()
+
+		if self.uniqueImport and (self.insertMode or alreadyImported):
+			region = self.view.sel()[selectionObj.index]
+			self.view.run_command("replace", {"characters": importObj.name, "start": self.view.sel()[selectionObj.index].begin(), "end": self.view.sel()[selectionObj.index].end()})
+
+		if alreadyImported:
+			return
+
+		if self.imports != "":
+			self.imports += "\n"
+
+	def resolve(self, selectionObj):
+		if selectionObj.isPending():
+			return
+
+		if self.imports.strip() != "":
+			if(self.insertMode):
+				self.view.run_command("insert_at", {"characters": self.imports})
+			else:
+				self.view.run_command("replace", {"characters": self.imports, "start": selectionObj.region.begin(), "end": selectionObj.region.end()})
 
 
 	def findImportationByName(self, word):
-		return self.view.find(r"{0}".format(ANY_IMPORT_BY_NAME_REGEX.format(word)), 0);
+		return self.view.find(r"{0}".format(ANY_IMPORT_BY_NAME_REGEX.format(name=word)), 0);
 
 	def isAlreadyImported(self, word):
 		if isinstance(word, sublime.Region):
@@ -180,6 +306,37 @@ class ImportEs6Command(sublime_plugin.TextCommand):
 		else:
 			region = self.findImportationByName(word)
 		return region.begin() != -1 or region.end() != -1
+
+	def searchFiles(self, search, includeView=False):
+
+		search = r"^{0}".format(search)
+
+		results = []
+
+		for dirpath, dirnames, filenames in os.walk(self.project_root, topdown=True):
+
+			crpath = dirpath[self.project_path_length + 1:] + "/" if dirpath != self.project_root else ""
+
+			dirnames[:] = [dirname for dirname in dirnames if ( crpath + dirname  ) not in excluded_directories]
+
+			results = results + [crpath + filename for filename in filenames if re.match(search, filename) and (includeView or (not includeView and crpath + filename != self.viewPath))]
+
+		return results
+
+
+	def parseFileName(self, filename):
+		extension = filename.split(".")[-1]
+
+		if(extension in excluded_extensions):
+			return filename[: (len(extension) + 1) * -1 ]
+		else:
+			return filename
+
+
+
+
+
+
 
 
 
