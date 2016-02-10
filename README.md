@@ -12,37 +12,72 @@ NOTE! Currently this plugin does not search for files in the project. It 'just' 
 #### name
 This can be either a path, a name or the variable that will be defined for the module.
 
-`React`  ->  `import React from 'react'`
+	React; ./stores/BaseStore` 
 
-`./stores/BaseStore`  ->  `import BaseStore from './stores/BaseStore'`
+becomes...
+
+	import React from 'react';
+	import BaseStore from './stores/BaseStore';
+
 
 #### module
 (Optional) You can set the module to be imported. It can be a path or a simple module.
 
-`ReactDOM:react-dom` -> `import ReactDOM from 'react-dom'`
+	ReactDOM:react-dom; Utils:../Path/to/utils.jsx
 
-`Utils:../Path/to/utils.jsx` -> `import Utils from '../Path/to/utils.jsx'`
+becomes...
+	
+	import ReactDOM from 'react-dom';
+	import Utils from '../Path/to/utils.jsx';
 
 #### type
 (Optional) Sometimes you dont want to use ES6 import, so just add ':$' at the end and it will be converted to `require` instead of import.
 
-  `ReactDOM:react-dom:$` -> `var ReactDOM = require('react-dom');`
+	React:$; React-DOM:$
 
-#### Import method
+becomes...
+
+	var React = require('react');
+	var ReactDOM = require('react-dom');
+
+## Import a method
 If you put "::" between the name and the module, it will import a method or a propertie of it.
 
-`ActonTypes::./constants/AppConstants` -> `import {ActonTypes} from './constants/AppConstants'`
+	ActonTypes::./constants/AppConstants
+	ActonTypes::./constants/AppConstants:$
+	
+becomes...
 
-`ActonTypes::./constants/AppConstants:$` -> `var ActionTypes = require('./constants/AppConstants').ActionTypes`
+	import {ActonTypes} from './constants/AppConstants';
+	var ActionTypes = require('./constants/AppConstants').ActionTypes;
+	
 
 #### Multiple at once
-	You can import as many modules you want at once, just separate them with a semicolon.
+You can import as many modules you want at once, just separate them with a semicolon.
 
-	`React;./Example.jsx;A::B`
-	becomes...
-	`import React from 'react';
+	React;./Example.jsx;A::B
+
+becomes...
+
+	import React from 'react';
 	import Example from './Example.jsx';
-	import {A} from 'B';`
+	import {A} from 'B';
+	
+	
+# Installation
+Just clone this repository in your packages folder and add the key bindings
+
+ - Use `Ctrl+Shift+P` and find `Browse Packages`. Press ENTER and it will open the packages folder.
+ - Clone this repository `git clone https://github.com/vini175pa/simple-import-js.git`
+ - [Add the key bindings](#key-binding)
+	
+# Key Binding
+Just add this in your **Preferences > Key Bindings - User**
+
+	
+	{ "keys": ["ctrl+alt+j"], "command": "import_es6"},
+	{ "keys": ["ctrl+alt+i"], "command": "import_es6", "args": { "insert": true}}
+	
 
 # Notes
 PressThis project is just starting. I know it doesn't does much yet, but I hope it will become a bigger plugin in the near future. Feel free to contribute, to criticize the code lol. :)
