@@ -1,4 +1,6 @@
-import sublime, sublime_plugin, re, os
+# If you detect any bug or run into some error, report so it can be fixed at https://github.com/vini175pa/simple-import-js
+
+import sublime, sublime_plugin, re, os, json
 
 IMPORT_ES6_REGEX = "import[\s]+(?P<isFromModule>\{)?[\s]*(?P<names>(([\s]*,[\s]*|[^\s\{\}\.])+))+[\s]*(?P<isFromModule2>\})?[\s]+from[\s]+(\'|\")(?P<module>.+)(\'|\")"
 
@@ -6,31 +8,54 @@ IMPORT_ES6_REGEX = "import[\s]+(?P<isFromModule>\{)?[\s]*(?P<names>(([\s]*,[\s]*
 # double brackets are turned on one in str.format
 ANY_IMPORT_BY_NAME_REGEX = "(import[\s]+\{{?[\s]*{name}[\s]*\}}?[\s]+from[\s]+(\'|\").+(\'|\")|((var[\s]+)?){name}[\s]*\=[\s]*require\([\s]*(\'|\").+(\'|\")[\s]*\)([\s]*\.[\s]*\w+)?)([\s]*;)?"
 
-
+SEARCH_IGNORECASE_INDICATOR = "!"
 MODULE_SEPARATOR = ";"
 NAME_MODULE_SEPARATOR = ":"
 IMPORT_FROM_SEPARATOR = "::"
-
-excluded_directories = ["./.git", "node_modules"]
-excluded_directories = [os.path.normpath(path) for path in excluded_directories if (path != "." or path != "./")]
-
-excluded_extensions = ["js", "jsx"]
+SEARCH_INDICATOR = "@"
 
 PENDING_STATUS = "pending"
 RESOLVED_STATUS = "resolved"
 
+DEFAULT_SETTINGS_FILE = ".simple-import"
+
 REMOVE_INDEX_FROM_PATH = True
+
+class Settings:
+	def __init__(self, obj={}):
+		self.obj = {}
+
+	def set(self, key, value):
+		self.obj[key] = value
+
+	def get(self, key):
+		return self.obj[key]
+
+	def update(self, obj):
+		self.obj.update(obj)
+
+	def setObj(self, obj):
+		self.obj = obj
+
+mSettings = Settings()
 
 class ImportSelection:
 	def __init__(self, region, index=0, importObjs=[]):
 		self.region = region
 		self.importObjs = importObjs
 		self.index = index
+		self.status = PENDING_STATUS
 
 	def addImportObj(self, importObj):
 		self.importObjs.append(importObj)
 
+	def resolve(self):
+		self.status = RESOLVED_STATUS
+
 	def isPending(self):
+		return self.status == PENDING_STATUS
+
+	def areImportsPending(self):
 		isPending = False
 		for x in self.importObjs:
 			if x.isPending():
@@ -54,6 +79,7 @@ class Importation:
 		self.fromModule = False
 		self.alternative = False
 		self.searchForFiles = False
+		self.searchFlags = {}
 
 		word = word.strip()
 
@@ -109,16 +135,20 @@ class Importation:
 		self.searchResults = searchResults
 
 	def parseName(self, name):
-		if("@" in name):
+		if(mSettings.get("search_indicator") in name):
+			self.checkSearchForWord(name)
+			name = name.replace(mSettings.get("search_indicator"), "")
 
-			if name[0] == "@":
-				self.searchForFiles = True
-				self.searchFor = name[1:]
+		if("*" in name):
+			name = name.replace("*", "")
 
-			name = name.replace("@", "")
+		if("!" in name):
+			name = name.replace("!", "")
 
 		if("/" in name):
 			name = name.split("/")[-1]
+
+
 
 		if("-" in name):
 			words = name.split("-")
@@ -131,6 +161,30 @@ class Importation:
 			name = name.split(".")[0]
 
 		return name
+
+	def parseModule(self, module):
+		if(mSettings.get("search_indicator") in module):
+			self.checkSearchForWord(module)
+			module = module.replace(mSettings.get("search_indicator"), "")
+
+		if("/" not in module):
+			module = module.lower()
+
+		return module
+
+	def checkSearchForWord(self, word):
+		if word[:2] == mSettings.get("search_ignorecase_indicator") + mSettings.get("search_indicator"):
+			self.searchFlags["caseInsesitive"] = True
+			self.searchFor = word[len(  mSettings.get("search_ignorecase_indicator") + mSettings.get("search_indicator") ):]
+		elif word[0] != mSettings.get("search_indicator"):
+			return False
+		else:
+			self.searchFor = word[len(mSettings.get("search_indicator")):]
+
+		self.searchForFiles = True
+
+		return True
+
 
 	def setModule(self, module, isPath=False):
 		if(isPath):
@@ -146,18 +200,7 @@ class Importation:
 		else:
 			return "./" + path
 
-	def parseModule(self, module):
-		if("@" in module):
-			if module[0] == "@":
-				self.searchForFiles = True
-				self.searchFor = module[1:]
 
-			module = module.replace("@", "")
-
-		if("/" not in module):
-			module = module.lower()
-
-		return module
 
 	def getEs6Import(self):
 		name = self.name
@@ -200,7 +243,7 @@ class ImportEs6Command(sublime_plugin.TextCommand):
 		self.project_root = self.view.window().extract_variables()['folder']
 		self.project_path_length = len(self.project_root)
 
-		self.pendingImports = []
+		self.loadSettings()
 
 		self.viewPath = "" if not self.view.file_name() else os.path.relpath(self.view.file_name(), self.project_root)
 		self.viewRelativeDir = os.path.dirname(self.viewPath) if self.viewPath != "." else ""
@@ -208,18 +251,24 @@ class ImportEs6Command(sublime_plugin.TextCommand):
 
 		self.insertMode = args.get('insert')
 
+		self.pendingImports = []
+		self.selectionsObjs = []
+
 		selections = self.view.sel();
-		self.selectionsPending = {}
 
 		# if only one expression was selected
 		self.uniqueImport = selections[0] == selections[-1]
 
-		selectionIndex = 0;
+		selectionIndex = 0
+
 		for selection in selections:
 
 			self.imports = ""
 			selectionObj =  ImportSelection(selection, selectionIndex)
-			words = (self.view.substr(selection)).split(MODULE_SEPARATOR)
+
+			self.selectionsObjs.append(selectionObj)
+
+			words = re.split("{0}|\n".format(MODULE_SEPARATOR), self.view.substr(selection))
 
 			if not words[-1]:
 				words = words[:-1]
@@ -241,7 +290,7 @@ class ImportEs6Command(sublime_plugin.TextCommand):
 
 
 				if importObj.searchForFiles:
-					searchResults = self.searchFiles(importObj.searchFor)
+					searchResults = self.searchFiles(importObj.searchFor, **importObj.searchFlags)
 
 					importObj.setResults(searchResults)
 					if len(searchResults) > 1:
@@ -254,15 +303,79 @@ class ImportEs6Command(sublime_plugin.TextCommand):
 				self.handleImportObj(importObj, selectionObj)
 
 			selectionIndex += 1
-			self.resolve(selectionObj)
+			self.resolveSelection(selectionObj)
+
+
+	def loadSettings(self):
+
+		settings = {
+			"separator" : MODULE_SEPARATOR,
+			"name_separator" : NAME_MODULE_SEPARATOR,
+			"from_indicator" : IMPORT_FROM_SEPARATOR,
+			"excluded_directories" : [],
+			"excluded_extensions" : [],
+			"remove_index_from_path": True,
+			"search_indicator" : SEARCH_INDICATOR,
+			"search_ignorecase_indicator" : SEARCH_IGNORECASE_INDICATOR,
+			"settings_file"  : DEFAULT_SETTINGS_FILE
+		}
+
+		sublime_settings = self.view.settings().get("simple-import") or False
+		if sublime_settings:
+			settings.update(sublime_settings)
+
+		if os.path.isfile(os.path.join(self.project_root, settings["settings_file"])):
+			with open(os.path.join(self.project_root, settings["settings_file"])) as data_file:
+				try:
+					data = json.load(data_file)
+				except ValueError:
+					print("SIMPLE-IMPORT ERROR :: Error trying to load {0}".format(settings["settings_file"]))
+					data = {}
+				settings.update(data)
+
+		mSettings.setObj(settings)
+
+		return mSettings
+
+	def resolveSelection(self, selectionObj):
+		if selectionObj.areImportsPending():
+			return
+
+		if self.imports.strip() != "":
+			if(self.insertMode):
+				self.view.run_command("insert_at", {"characters": self.imports})
+			else:
+				self.view.run_command("replace", {"characters": self.imports, "start": selectionObj.region.begin(), "end": selectionObj.region.end()})
+
+		selectionObj.resolve()
+
+		allSelectionsResolved = True
+		for  x in self.selectionsObjs:
+			if x.isPending():
+				allSelectionsResolved = False
+
+		if allSelectionsResolved:
+			self.onDone()
+
+	def onDone(self):
+		print(mSettings.get("excluded_directories"))
+		goTo = self.view.sel()[-1].end()
+		self.view.sel().clear()
+		self.view.sel().add(sublime.Region(goTo))
 
 	def handleClickItem(self, index):
 		importObj = self.pendingImports.pop(0)
 
+		if(index == -1):
+			importObj.selectionObj.importObjs.remove(importObj)
+			self.resolveSelection(importObj.selectionObj)
+			return
+
+
 		importObj.setModule(self.parseModulePath(importObj.searchResults[index]), True)
 
 		self.handleImportObj(importObj, importObj.selectionObj)
-		self.resolve(importObj.selectionObj)
+		self.resolveSelection(importObj.selectionObj)
 
 	def handleImportObj(self, importObj, selectionObj):
 
@@ -288,17 +401,6 @@ class ImportEs6Command(sublime_plugin.TextCommand):
 		if self.imports != "":
 			self.imports += "\n"
 
-	def resolve(self, selectionObj):
-		if selectionObj.isPending():
-			return
-
-		if self.imports.strip() != "":
-			if(self.insertMode):
-				self.view.run_command("insert_at", {"characters": self.imports})
-			else:
-				self.view.run_command("replace", {"characters": self.imports, "start": selectionObj.region.begin(), "end": selectionObj.region.end()})
-
-
 
 	def findImportationByName(self, word):
 		return self.view.find(r"{0}".format(ANY_IMPORT_BY_NAME_REGEX.format(name=word)), 0);
@@ -310,7 +412,7 @@ class ImportEs6Command(sublime_plugin.TextCommand):
 			region = self.findImportationByName(word)
 		return region.begin() != -1 or region.end() != -1
 
-	def searchFiles(self, search, includeView=False):
+	def searchFiles(self, search, includeViewFile=False, caseInsesitive=False):
 
 		results = []
 		searchWithFolders = False
@@ -333,19 +435,19 @@ class ImportEs6Command(sublime_plugin.TextCommand):
 			regex = search.replace("*", ".*")
 			regex = r"^{0}(\.[^\.]*)?$".format(regex)
 
-		print(regex)
-
-		print(searchWithFolders)
-
-
-
 		for dirpath, dirnames, filenames in os.walk(self.project_root, topdown=True):
 
 			crpath = dirpath[self.project_path_length + 1:] + "/" if dirpath != self.project_root else ""
 
-			dirnames[:] = [dirname for dirname in dirnames if ( crpath + dirname  ) not in excluded_directories]
+			dirnames[:] = [dirname for dirname in dirnames if ( crpath + dirname  ) not in mSettings.get("excluded_directories")]
 
-			results = results + [crpath + filename for filename in filenames if re.search(regex, (crpath if searchWithFolders else "") + filename) ]
+
+			_crpath = crpath if searchWithFolders else ""
+
+			for filename in filenames:
+				if includeViewFile or ( not includeViewFile and crpath + filename != self.viewPath):
+					if re.search(regex, _crpath + filename,  re.IGNORECASE if caseInsesitive else False):
+						results.append(crpath + filename)
 
 		return results
 
@@ -357,11 +459,11 @@ class ImportEs6Command(sublime_plugin.TextCommand):
 		if "." in filename:
 			extension = filename.split(".")[-1]
 
-			if(extension in excluded_extensions):
+			if(extension in mSettings.get("excluded_extensions")):
 				path = path[: (len(extension) + 1) * -1 ]
 
 
-		if "/" in path and REMOVE_INDEX_FROM_PATH and splited[0].strip() != "" and path[-5:] == "index":
+		if "/" in path and mSettings.get("remove_index_from_path") and splited[0].strip() != "" and path[-5:] == "index":
 			path = path[:-6]
 
 		return os.path.relpath(path, self.viewRelativeDir)
