@@ -19,6 +19,8 @@ excluded_extensions = ["js", "jsx"]
 PENDING_STATUS = "pending"
 RESOLVED_STATUS = "resolved"
 
+REMOVE_INDEX_FROM_PATH = True
+
 class ImportSelection:
 	def __init__(self, region, index=0, importObjs=[]):
 		self.region = region
@@ -237,17 +239,17 @@ class ImportEs6Command(sublime_plugin.TextCommand):
 
 				selectionObj.addImportObj(importObj)
 
+
 				if importObj.searchForFiles:
 					searchResults = self.searchFiles(importObj.searchFor)
 
 					importObj.setResults(searchResults)
-
 					if len(searchResults) > 1:
 						self.pendingImports.append(importObj)
 						self.view.show_popup_menu(searchResults, self.handleClickItem)
 						continue
 					elif len(searchResults) == 1:
-						importObj.setModule(self.parseFileName(os.path.relpath(searchResults[0], self.viewRelativeDir)), True)
+						importObj.setModule(self.parseModulePath(searchResults[0]), True)
 
 				self.handleImportObj(importObj, selectionObj)
 
@@ -257,7 +259,7 @@ class ImportEs6Command(sublime_plugin.TextCommand):
 	def handleClickItem(self, index):
 		importObj = self.pendingImports.pop(0)
 
-		importObj.setModule(self.parseFileName(os.path.relpath(importObj.searchResults[index], self.viewRelativeDir)), True)
+		importObj.setModule(self.parseModulePath(importObj.searchResults[index]), True)
 
 		self.handleImportObj(importObj, importObj.selectionObj)
 		self.resolve(importObj.selectionObj)
@@ -297,6 +299,7 @@ class ImportEs6Command(sublime_plugin.TextCommand):
 				self.view.run_command("replace", {"characters": self.imports, "start": selectionObj.region.begin(), "end": selectionObj.region.end()})
 
 
+
 	def findImportationByName(self, word):
 		return self.view.find(r"{0}".format(ANY_IMPORT_BY_NAME_REGEX.format(name=word)), 0);
 
@@ -309,9 +312,32 @@ class ImportEs6Command(sublime_plugin.TextCommand):
 
 	def searchFiles(self, search, includeView=False):
 
-		search = r"^{0}".format(search)
-
 		results = []
+		searchWithFolders = False
+
+		if("/" in search):
+			regex = search.replace("/", "\/")
+			regex = regex.replace("*\/", "(.+\/)?")
+			if regex[0] == "/":
+				regex = "^" + regex
+
+			if regex[-1] == "*":
+				regex = regex[:-1] + ".*"
+			else:
+				regex += "(\.[^\.]*)?$"
+
+			regex = r"{0}".format(regex)
+			searchWithFolders = True
+
+		else :
+			regex = search.replace("*", ".*")
+			regex = r"^{0}(\.[^\.]*)?$".format(regex)
+
+		print(regex)
+
+		print(searchWithFolders)
+
+
 
 		for dirpath, dirnames, filenames in os.walk(self.project_root, topdown=True):
 
@@ -319,18 +345,26 @@ class ImportEs6Command(sublime_plugin.TextCommand):
 
 			dirnames[:] = [dirname for dirname in dirnames if ( crpath + dirname  ) not in excluded_directories]
 
-			results = results + [crpath + filename for filename in filenames if re.match(search, filename) and (includeView or (not includeView and crpath + filename != self.viewPath))]
+			results = results + [crpath + filename for filename in filenames if re.search(regex, (crpath if searchWithFolders else "") + filename) ]
 
 		return results
 
+	def parseModulePath(self, path):
 
-	def parseFileName(self, filename):
-		extension = filename.split(".")[-1]
+		splited = path.split("/")
+		filename = path if "/" not in path else splited[-1]
 
-		if(extension in excluded_extensions):
-			return filename[: (len(extension) + 1) * -1 ]
-		else:
-			return filename
+		if "." in filename:
+			extension = filename.split(".")[-1]
+
+			if(extension in excluded_extensions):
+				path = path[: (len(extension) + 1) * -1 ]
+
+
+		if "/" in path and REMOVE_INDEX_FROM_PATH and splited[0].strip() != "" and path[-5:] == "index":
+			path = path[:-6]
+
+		return path
 
 
 
