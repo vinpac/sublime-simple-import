@@ -364,7 +364,7 @@ class ImportEs6Command(sublime_plugin.TextCommand):
 		if "/" in path and REMOVE_INDEX_FROM_PATH and splited[0].strip() != "" and path[-5:] == "index":
 			path = path[:-6]
 
-		return path
+		return os.path.relpath(path, self.viewRelativeDir)
 
 
 
