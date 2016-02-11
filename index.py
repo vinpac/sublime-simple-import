@@ -21,23 +21,10 @@ DEFAULT_SETTINGS_FILE = ".simple-import"
 
 REMOVE_INDEX_FROM_PATH = True
 
-class Settings:
-	def __init__(self, obj={}):
-		self.obj = {}
+SEARCH_BY_DEFAULT = True
+SEARCH_IGNORECASE_BY_DEFAULT = False
 
-	def set(self, key, value):
-		self.obj[key] = value
-
-	def get(self, key):
-		return self.obj[key]
-
-	def update(self, obj):
-		self.obj.update(obj)
-
-	def setObj(self, obj):
-		self.obj = obj
-
-mSettings = Settings()
+ES6_BY_DEFAULT = True
 
 class ImportSelection:
 	def __init__(self, region, index=0, importObjs=[]):
@@ -135,15 +122,10 @@ class Importation:
 		self.searchResults = searchResults
 
 	def parseName(self, name):
-		if(mSettings.get("search_indicator") in name):
-			self.checkSearchForWord(name)
-			name = name.replace(mSettings.get("search_indicator"), "")
+		self.checkSearchForWord(name)
 
-		if("*" in name):
-			name = name.replace("*", "")
-
-		if("!" in name):
-			name = name.replace("!", "")
+		# Remove some characters
+		name = "".join([x for x in name if x not in ["!", "@", "*"]])
 
 		if("/" in name):
 			name = name.split("/")[-1]
@@ -163,9 +145,10 @@ class Importation:
 		return name
 
 	def parseModule(self, module):
-		if(mSettings.get("search_indicator") in module):
-			self.checkSearchForWord(module)
-			module = module.replace(mSettings.get("search_indicator"), "")
+		self.checkSearchForWord(module)
+
+		if(SimpleImportCommand.settings.get("search_indicator") in module):
+			module = module.replace(SimpleImportCommand.settings.get("search_indicator"), "")
 
 		if("/" not in module):
 			module = module.lower()
@@ -173,17 +156,27 @@ class Importation:
 		return module
 
 	def checkSearchForWord(self, word):
-		if word[:2] == mSettings.get("search_ignorecase_indicator") + mSettings.get("search_indicator"):
-			self.searchFlags["caseInsesitive"] = True
-			self.searchFor = word[len(  mSettings.get("search_ignorecase_indicator") + mSettings.get("search_indicator") ):]
-		elif word[0] != mSettings.get("search_indicator"):
-			return False
-		else:
-			self.searchFor = word[len(mSettings.get("search_indicator")):]
+		indicator = word[:2]
+		remove_len = 0
+		settings = SimpleImportCommand.settings
+		search = settings.get("search_by_default")
 
-		self.searchForFiles = True
 
-		return True
+		if settings.get("search_indicator") in indicator:
+			remove_len += len(settings.get("search_indicator"))
+			search = not settings.get("search_by_default")
+
+		if settings.get("search_ignorecase_indicator") in indicator:
+			self.searchFlags["caseInsesitive"] = not settings.get("search_ignorecase_by_default")
+			remove_len += len(settings.get("search_ignorecase_indicator"))
+			search = search and settings.get("search_by_default")
+
+
+		if search:
+			self.searchForFiles = True
+			self.searchFor = word[remove_len:]
+
+		return search
 
 
 	def setModule(self, module, isPath=False):
@@ -220,7 +213,9 @@ class Importation:
 		return "var {0} = require(\"{1}\"){2}".format(self.name, self.module, end)
 
 	def __str__(self):
-		if(self.alternative):
+		es6_by_default = SimpleImportCommand.settings.get("es6_by_default")
+
+		if es6_by_default if self.alternative else not es6_by_default :
 			return self.getRequire()
 		else:
 			return self.getEs6Import()
@@ -236,7 +231,22 @@ class InsertAtCommand(sublime_plugin.TextCommand):
       self.view.insert(edit, start, characters)
 
 
-class ImportEs6Command(sublime_plugin.TextCommand):
+class SimpleImportCommand(sublime_plugin.TextCommand):
+
+	settings = {
+		"separator" : MODULE_SEPARATOR,
+		"name_separator" : NAME_MODULE_SEPARATOR,
+		"from_indicator" : IMPORT_FROM_SEPARATOR,
+		"excluded_directories" : [],
+		"remove_extensions" : [ "js" ],
+		"remove_index_from_path": True,
+		"search_indicator" : SEARCH_INDICATOR,
+		"search_ignorecase_indicator" : SEARCH_IGNORECASE_INDICATOR,
+		"settings_file"  : DEFAULT_SETTINGS_FILE,
+		"search_by_default" : SEARCH_BY_DEFAULT,
+		"search_ignorecase_by_default" : SEARCH_IGNORECASE_BY_DEFAULT,
+		"es6_by_default" : ES6_BY_DEFAULT
+	}
 
 	def run(self, edit, **args):
 
@@ -308,19 +318,9 @@ class ImportEs6Command(sublime_plugin.TextCommand):
 
 	def loadSettings(self):
 
-		settings = {
-			"separator" : MODULE_SEPARATOR,
-			"name_separator" : NAME_MODULE_SEPARATOR,
-			"from_indicator" : IMPORT_FROM_SEPARATOR,
-			"excluded_directories" : [],
-			"excluded_extensions" : [],
-			"remove_index_from_path": True,
-			"search_indicator" : SEARCH_INDICATOR,
-			"search_ignorecase_indicator" : SEARCH_IGNORECASE_INDICATOR,
-			"settings_file"  : DEFAULT_SETTINGS_FILE
-		}
-
+		settings = SimpleImportCommand.settings
 		sublime_settings = self.view.settings().get("simple-import") or False
+
 		if sublime_settings:
 			settings.update(sublime_settings)
 
@@ -333,9 +333,7 @@ class ImportEs6Command(sublime_plugin.TextCommand):
 					data = {}
 				settings.update(data)
 
-		mSettings.setObj(settings)
-
-		return mSettings
+		return settings
 
 	def resolveSelection(self, selectionObj):
 		if selectionObj.areImportsPending():
@@ -358,7 +356,6 @@ class ImportEs6Command(sublime_plugin.TextCommand):
 			self.onDone()
 
 	def onDone(self):
-		print(mSettings.get("excluded_directories"))
 		goTo = self.view.sel()[-1].end()
 		self.view.sel().clear()
 		self.view.sel().add(sublime.Region(goTo))
@@ -439,7 +436,7 @@ class ImportEs6Command(sublime_plugin.TextCommand):
 
 			crpath = dirpath[self.project_path_length + 1:] + "/" if dirpath != self.project_root else ""
 
-			dirnames[:] = [dirname for dirname in dirnames if ( crpath + dirname  ) not in mSettings.get("excluded_directories")]
+			dirnames[:] = [dirname for dirname in dirnames if ( crpath + dirname  ) not in SimpleImportCommand.settings.get("excluded_directories")]
 
 
 			_crpath = crpath if searchWithFolders else ""
@@ -459,11 +456,10 @@ class ImportEs6Command(sublime_plugin.TextCommand):
 		if "." in filename:
 			extension = filename.split(".")[-1]
 
-			if(extension in mSettings.get("excluded_extensions")):
+			if(extension in SimpleImportCommand.settings.get("remove_extensions")):
 				path = path[: (len(extension) + 1) * -1 ]
 
-
-		if "/" in path and mSettings.get("remove_index_from_path") and splited[0].strip() != "" and path[-5:] == "index":
+		if "/" in path and SimpleImportCommand.settings.get("remove_index_from_path") and splited[0].strip() != "" and path.endswith("index"):
 			path = path[:-6]
 
 		return os.path.relpath(path, self.viewRelativeDir)
