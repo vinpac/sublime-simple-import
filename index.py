@@ -22,7 +22,7 @@ DEFAULT_SETTINGS_FILE = ".simple-import"
 REMOVE_INDEX_FROM_PATH = True
 
 SEARCH_BY_DEFAULT = True
-SEARCH_IGNORECASE_BY_DEFAULT = False
+SEARCH_IGNORECASE_BY_DEFAULT = True
 
 ES6_BY_DEFAULT = True
 
@@ -66,7 +66,9 @@ class Importation:
 		self.fromModule = False
 		self.alternative = False
 		self.searchForFiles = False
-		self.searchFlags = {}
+		self.searchFlags = {
+			"caseInsesitive": SimpleImportCommand.settings.get("search_ignorecase_by_default")
+		}
 
 		word = word.strip()
 
@@ -128,7 +130,10 @@ class Importation:
 		name = "".join([x for x in name if x not in ["!", "@", "*"]])
 
 		if("/" in name):
-			name = name.split("/")[-1]
+			splited = name.split("/")
+			name = splited[-1]
+			if name == "index":
+				name = splited[-2] or name
 
 
 
@@ -161,10 +166,11 @@ class Importation:
 		settings = SimpleImportCommand.settings
 		search = settings.get("search_by_default")
 
-
 		if settings.get("search_indicator") in indicator:
 			remove_len += len(settings.get("search_indicator"))
 			search = not settings.get("search_by_default")
+
+
 
 		if settings.get("search_ignorecase_indicator") in indicator:
 			self.searchFlags["caseInsesitive"] = not settings.get("search_ignorecase_by_default")
@@ -238,7 +244,7 @@ class SimpleImportCommand(sublime_plugin.TextCommand):
 		"name_separator" : NAME_MODULE_SEPARATOR,
 		"from_indicator" : IMPORT_FROM_SEPARATOR,
 		"excluded_directories" : [],
-		"remove_extensions" : [ "js" ],
+		"extensions" : [ "js" ],
 		"remove_index_from_path": True,
 		"search_indicator" : SEARCH_INDICATOR,
 		"search_ignorecase_indicator" : SEARCH_IGNORECASE_INDICATOR,
@@ -414,36 +420,22 @@ class SimpleImportCommand(sublime_plugin.TextCommand):
 		results = []
 		searchWithFolders = False
 
-		if("/" in search):
-			regex = search.replace("/", "\/")
-			regex = regex.replace("*\/", "(.+\/)?")
-			if regex[0] == "/":
-				regex = "^" + regex
+		settings = SimpleImportCommand.settings
 
-			if regex[-1] == "*":
-				regex = regex[:-1] + ".*"
-			else:
-				regex += "(\.[^\.]*)?$"
-
-			regex = r"{0}".format(regex)
-			searchWithFolders = True
-
-		else :
-			regex = search.replace("*", ".*")
-			regex = r"^{0}(\.[^\.]*)?$".format(regex)
+		_search = search.replace("/", "\/");
+		_search = _search.replace("*", "");
+		regex = "({0}{1}|{0}\/index){2}$".format(_search, "(.)*" if search[-1] == "*" else "", "\.({0})".format("|".join(settings.get("extensions"))));
 
 		for dirpath, dirnames, filenames in os.walk(self.project_root, topdown=True):
 
 			crpath = dirpath[self.project_path_length + 1:] + "/" if dirpath != self.project_root else ""
 
-			dirnames[:] = [dirname for dirname in dirnames if ( crpath + dirname  ) not in SimpleImportCommand.settings.get("excluded_directories")]
+			dirnames[:] = [dirname for dirname in dirnames if ( crpath + dirname  ) not in settings.get("excluded_directories")]
 
-
-			_crpath = crpath if searchWithFolders else ""
 
 			for filename in filenames:
 				if includeViewFile or ( not includeViewFile and crpath + filename != self.viewPath):
-					if re.search(regex, _crpath + filename,  re.IGNORECASE if caseInsesitive else False):
+					if re.search(regex, crpath + filename,  re.IGNORECASE if caseInsesitive else False):
 						results.append(crpath + filename)
 
 		return results
@@ -456,7 +448,7 @@ class SimpleImportCommand(sublime_plugin.TextCommand):
 		if "." in filename:
 			extension = filename.split(".")[-1]
 
-			if(extension in SimpleImportCommand.settings.get("remove_extensions")):
+			if(extension in SimpleImportCommand.settings.get("extensions")):
 				path = path[: (len(extension) + 1) * -1 ]
 
 		if "/" in path and SimpleImportCommand.settings.get("remove_index_from_path") and splited[0].strip() != "" and path.endswith("index"):
