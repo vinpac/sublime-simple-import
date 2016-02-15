@@ -76,7 +76,7 @@ You can set `"simple-import" : { <here comes the settings> }` at your sublime se
 
 **excluded_directories**  (Array) :   Directories that wont be matched. Example: `["node_modules", ".git"]`
 
-**remove_extensions**  (Array) :   Extensions to be removed. Don't add "." (dot). **Default** `[ "js" ]`
+**extensions**  (Array) :   Extensions to be matched on search and will be removed from file on import . Don't add "." (dot). **Default** `[ "js" ]`
 
 **separator** (String) : The separator between imports. **Default** `;`
 
@@ -94,9 +94,9 @@ You can set `"simple-import" : { <here comes the settings> }` at your sublime se
 
 **search_by_default** (Boolean): Indicates if by default an import should do a search. The Search Indicator (`@`) makes the import do the opposite of the default. **Default** `True`
 
-**search_ignorecase_by_default** :  (Boolean): Indicates if by default an import should do a search case insensitive ( ignore the cases) . The Ignore Case Indicator (`!`) makes the import do the opposite of the default. **Default** `False`
+**search_ignorecase_by_default** :  (Boolean): Indicates if by default an import should do a search case insensitive ( ignore the cases) . The Ignore Case Indicator (`!`) makes the import do the opposite of the default. **Default** `True`
 
-**es6_by_default** :  (Boolean): Indicates if by default an import should be an `import` or a `require`.  A `$` at the end of an import makes it do the opposite of the default. **Default** `False`
+**es6_by_default** :  (Boolean): Indicates if by default an import should be an `import` or a `require`.  A `$` at the end of an import makes it do the opposite of the default. **Default** `True`
 
 
 Installation
