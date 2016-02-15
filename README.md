@@ -1,4 +1,4 @@
-Simple Import JS
+Simple Import JS - Development
 ===================
 
 `Simple import` is a plugin for Sublime Text that imports your modules. Just select select the module you want to import and select "Simple Import: insert imports". You can import as many modules you want at once.
@@ -97,6 +97,30 @@ You can set `"simple-import" : { <here comes the settings> }` at your sublime se
 **search_ignorecase_by_default** :  (Boolean): Indicates if by default an import should do a search case insensitive ( ignore the cases) . The Ignore Case Indicator (`!`) makes the import do the opposite of the default. **Default** `True`
 
 **es6_by_default** :  (Boolean): Indicates if by default an import should be an `import` or a `require`.  A `$` at the end of an import makes it do the opposite of the default. **Default** `True`
+
+
+## Different settings for each path
+
+If you want to use different settings for specific folders or files you can! In your `.simple-import.json` set only `paths`. Let's see an example:
+
+	{
+		"paths": {
+
+			"nodejs" : [ "sockets.js",  "app.js", "routes", "passport", "models", "lib",
+				{
+					"es6_by_default": false,
+					"excluded_directories": [ "react", "node_modules", ".git", "src" ]
+				}
+			],
+
+			"/react" : {
+				"extensions": ["js", "jsx"]
+			}
+
+		}
+	}
+
+It only works on your `.simple-import.json` and won't work on sublime settings.
 
 
 Installation

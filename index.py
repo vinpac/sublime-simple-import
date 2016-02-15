@@ -8,23 +8,24 @@ IMPORT_ES6_REGEX = "import[\s]+(?P<isFromModule>\{)?[\s]*(?P<names>(([\s]*,[\s]*
 # double brackets are turned on one in str.format
 ANY_IMPORT_BY_NAME_REGEX = "(import[\s]+\{{?[\s]*{name}[\s]*\}}?[\s]+from[\s]+(\'|\").+(\'|\")|((var[\s]+)?){name}[\s]*\=[\s]*require\([\s]*(\'|\").+(\'|\")[\s]*\)([\s]*\.[\s]*\w+)?)([\s]*;)?"
 
-SEARCH_IGNORECASE_INDICATOR = "!"
-MODULE_SEPARATOR = ";"
-NAME_MODULE_SEPARATOR = ":"
-IMPORT_FROM_SEPARATOR = "::"
-SEARCH_INDICATOR = "@"
-
 PENDING_STATUS = "pending"
 RESOLVED_STATUS = "resolved"
 
-DEFAULT_SETTINGS_FILE = ".simple-import.json"
-
-REMOVE_INDEX_FROM_PATH = True
-
-SEARCH_BY_DEFAULT = True
-SEARCH_IGNORECASE_BY_DEFAULT = True
-
-ES6_BY_DEFAULT = True
+DEFAULT_SETTINGS = {
+	"paths" : {},
+	"separator" : ";",
+	"name_separator" : ":",
+	"from_indicator" : "::",
+	"excluded_directories" : [],
+	"extensions" : [ "js" ],
+	"remove_index_from_path": True,
+	"search_indicator" : "@",
+	"search_ignorecase_indicator" : "!",
+	"settings_file"  : ".simple-import.json",
+	"search_by_default" : True,
+	"search_ignorecase_by_default" : True,
+	"es6_by_default" : True
+}
 
 class ImportSelection:
 	def __init__(self, region, index=0, importObjs=[]):
@@ -237,31 +238,20 @@ class InsertAtCommand(sublime_plugin.TextCommand):
 
 class SimpleImportCommand(sublime_plugin.TextCommand):
 
-	settings = {
-		"separator" : MODULE_SEPARATOR,
-		"name_separator" : NAME_MODULE_SEPARATOR,
-		"from_indicator" : IMPORT_FROM_SEPARATOR,
-		"excluded_directories" : [],
-		"extensions" : [ "js" ],
-		"remove_index_from_path": True,
-		"search_indicator" : SEARCH_INDICATOR,
-		"search_ignorecase_indicator" : SEARCH_IGNORECASE_INDICATOR,
-		"settings_file"  : DEFAULT_SETTINGS_FILE,
-		"search_by_default" : SEARCH_BY_DEFAULT,
-		"search_ignorecase_by_default" : SEARCH_IGNORECASE_BY_DEFAULT,
-		"es6_by_default" : ES6_BY_DEFAULT
-	}
+	settings = {}
 
 	def run(self, edit, **args):
 
 		self.project_root = self.view.window().extract_variables()['folder']
 		self.project_path_length = len(self.project_root)
 
-		self.loadSettings()
+
 
 		self.viewPath = "" if not self.view.file_name() else os.path.relpath(self.view.file_name(), self.project_root)
 		self.viewRelativeDir = os.path.dirname(self.viewPath) if self.viewPath != "." else ""
 		self.filename = os.path.basename(self.viewPath)
+
+		self.loadSettings()
 
 		self.insertMode = args.get('insert')
 
@@ -323,6 +313,8 @@ class SimpleImportCommand(sublime_plugin.TextCommand):
 	def loadSettings(self):
 
 		settings = SimpleImportCommand.settings
+		settings.update(DEFAULT_SETTINGS)
+
 		sublime_settings = self.view.settings().get("simple-import") or False
 
 		if sublime_settings:
@@ -335,9 +327,37 @@ class SimpleImportCommand(sublime_plugin.TextCommand):
 				except ValueError:
 					print("SIMPLE-IMPORT ERROR :: Error trying to load {0}".format(settings["settings_file"]))
 					data = {}
-				settings.update(data)
+
+				pData = False
+				if data["paths"]:
+					for key, value in data["paths"].items():
+						pData = self.resolveSettingsForPath(key, value)
+						if pData:
+							settings.update(pData)
+							break
+
+				if not pData:
+					settings.update(data)
 
 		return settings
+
+	def resolveSettingsForPath(self, key, value, ):
+		paths = None
+		settings = None
+		if isinstance(value, dict):
+			settings = value
+			if isinstance(key, list):
+				paths = key
+			else:
+				paths = [ key ]
+		elif isinstance(value, list):
+			return self.resolveSettingsForPath(value[:-1], value[-1])
+		else:
+			return False
+
+		return settings if re.search("^({0})".format("|".join(paths)), self.viewPath) else False
+
+
 
 	def resolveSelection(self, selectionObj):
 		if selectionObj.areImportsPending():
