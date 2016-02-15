@@ -17,7 +17,7 @@ SEARCH_INDICATOR = "@"
 PENDING_STATUS = "pending"
 RESOLVED_STATUS = "resolved"
 
-DEFAULT_SETTINGS_FILE = ".simple-import"
+DEFAULT_SETTINGS_FILE = ".simple-import.json"
 
 REMOVE_INDEX_FROM_PATH = True
 
@@ -133,9 +133,7 @@ class Importation:
 			splited = name.split("/")
 			name = splited[-1]
 			if name == "index":
-				name = splited[-2] or name
-
-
+				name = splited[-2] or names
 
 		if("-" in name):
 			words = name.split("-")

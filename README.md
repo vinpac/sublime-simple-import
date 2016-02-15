@@ -59,7 +59,7 @@ Searching accepts some flags. Examples: `components/*/index`, `components/*/i*`,
 Configurations
 -------------
 
-To configurate Simple Import you can do 2 this. You can create a file on the root of your project called `.simple-import`. **IMPORTANT** This is a json file.
+To configurate Simple Import you can do 2 this. You can create a file on the root of your project called `.simple-import.json`. **IMPORTANT** This is a json file.
 
 Example:
 
