@@ -113,7 +113,7 @@ If you want to use different settings for specific folders or files you can! In 
 				}
 			],
 
-			"/react" : {
+			"react/components" : {
 				"extensions": ["js", "jsx"]
 			}
 
