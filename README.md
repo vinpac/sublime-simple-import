@@ -1,4 +1,4 @@
-Simple Import JS - Development
+Simple Import JS
 ===================
 
 `Simple import` is a plugin for Sublime Text that imports your modules. Just select select the module you want to import and select "Simple Import: insert imports". You can import as many modules you want at once.
