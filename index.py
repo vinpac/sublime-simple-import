@@ -253,6 +253,8 @@ class SimpleImportCommand(sublime_plugin.TextCommand):
 
 		self.loadSettings()
 
+		settings = SimpleImportCommand.settings
+
 		self.insertMode = args.get('insert')
 
 		self.pendingImports = []
@@ -272,7 +274,7 @@ class SimpleImportCommand(sublime_plugin.TextCommand):
 
 			self.selectionsObjs.append(selectionObj)
 
-			words = re.split("{0}|\n".format(MODULE_SEPARATOR), self.view.substr(selection))
+			words = re.split("{0}|\n".format(settings["separator"]), self.view.substr(selection))
 
 			if not words[-1]:
 				words = words[:-1]
