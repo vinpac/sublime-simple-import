@@ -55,9 +55,9 @@ class ImportSelection:
 	def getImportsString(self):
 		string = ""
 		for importObj in self.importObjects:
-
-
-			string += importObj.__str__() + "\n"
+			if string != "":
+				string += "\n"
+			string += importObj.__str__()
 
 		return string
 
@@ -124,7 +124,7 @@ class Importation:
 			self.module = self.parseModule(word[1])
 
 		else:
-			self.name = self.parseName(word, True)
+			self.name = self.parseName(word)
 			self.module = self.parseModule(word)
 
 	def setAlreadyImported(self, alreadyImported, alreadyImportedObject):
@@ -143,7 +143,7 @@ class Importation:
 	def setResults(self, searchResults):
 		self.searchResults = searchResults
 
-	def parseName(self, name, fromModule=False):
+	def parseName(self, name):
 		self.checkSearchForWord(name)
 
 		# Remove some characters
@@ -163,9 +163,6 @@ class Importation:
 
 		if("." in name):
 			name = name.split(".")[0]
-
-		if fromModule:
-			name = name[0].upper() + name[1:]
 
 		return name
 
@@ -348,6 +345,8 @@ class SimpleImportCommand(sublime_plugin.TextCommand):
 		importObj.resolve()
 		if importObj.alreadyImported:
 			self.view.run_command("replace", {"characters": importObj.__str__(), "start": importObj.alreadyImportedObject.begin(), "end": importObj.alreadyImportedObject.end()})
+			selectionObj.importObjects.remove(importObj)
+
 
 
 	def resolveSelection(self, selectionObj):
@@ -360,7 +359,11 @@ class SimpleImportCommand(sublime_plugin.TextCommand):
 
 		importsString = selectionObj.getImportsString()
 
+
+
 		if importsString != "":
+			if self.insertMode or selectionObj != self.selectionObjects[0]:
+				importsString += "\n"
 			if(self.insertMode):
 				self.view.run_command("insert_at", {"characters": importsString})
 			else:
@@ -368,7 +371,14 @@ class SimpleImportCommand(sublime_plugin.TextCommand):
 
 		selectionObj.resolve()
 
-		if len(self.selectionObjects) == 0:
+		allResolved = True
+
+		for _selectionObj in self.selectionObjects:
+			if _selectionObj.isPending:
+				allResolved = False
+				break
+
+		if allResolved:
 			self.onDone()
 
 	def onDone(self):
@@ -383,7 +393,7 @@ class SimpleImportCommand(sublime_plugin.TextCommand):
 
 		dependencies = dict.keys(packageJSON["dependencies"])
 
-		return self.view.find_all(r"(?<![^ ])({0})(?![^\.| ])".format("|".join(dependencies)), 0);
+		return self.view.find_all(r"(?<![^\s])({0})(?![^\.|\(|\s])".format("|".join(dependencies)), re.IGNORECASE);
 
 
 
