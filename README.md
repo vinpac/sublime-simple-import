@@ -138,7 +138,8 @@ Just clone this repository in your packages folder and add the key bindings.
 Just add this in your **Preferences > Key Bindings - User**
 
 	{ "keys": ["ctrl+alt+j"], "command": "simple_import"},
-	{ "keys": ["ctrl+alt+i"], "command": "simple_import", "args": { "insert": true}}
+	{ "keys": ["ctrl+alt+i"], "command": "simple_import", "args": { "insert": true}},
+	{ "keys": ["ctrl+alt+u"], "command": "simple_import", "args": { "resolve": true}}
 
 
 Contributing
