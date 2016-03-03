@@ -28,14 +28,14 @@ DEFAULT_SETTINGS = {
 }
 
 class ImportSelection:
-	def __init__(self, region, index=0, importObjs=[]):
+	def __init__(self, region, index=0):
 		self.region = region
-		self.importObjs = importObjs
+		self.importObjects = []
 		self.index = index
 		self.status = PENDING_STATUS
 
 	def addImportObj(self, importObj):
-		self.importObjs.append(importObj)
+		self.importObjects.append(importObj)
 
 	def resolve(self):
 		self.status = RESOLVED_STATUS
@@ -45,7 +45,7 @@ class ImportSelection:
 
 	def areImportsPending(self):
 		isPending = False
-		for x in self.importObjs:
+		for x in self.importObjects:
 			if x.isPending():
 				isPending = True
 				break
@@ -55,11 +55,15 @@ class ImportSelection:
 class Importation:
 
 	@staticmethod
+	def wordToModuleName(word):
+		return word
+
+	@staticmethod
 	def isImportWord(word):
 		match = re.match(r'{0}'.format(IMPORT_ES6_REGEX), word.strip())
 		return match
 
-	def __init__(self, word, selectionObj):
+	def __init__(self, word, selectionObj, alreadyImported=False, alreadyImportedObject=None):
 
 		self.status = PENDING_STATUS
 		self.searchResults = []
@@ -70,6 +74,8 @@ class Importation:
 		self.searchFlags = {
 			"caseInsesitive": SimpleImportCommand.settings.get("search_ignorecase_by_default")
 		}
+		self.alreadyImported = alreadyImported
+		self.alreadyImportedObject = alreadyImportedObject
 
 		word = word.strip()
 
@@ -111,6 +117,10 @@ class Importation:
 		else:
 			self.name = self.parseName(word)
 			self.module = self.parseModule(word)
+
+	def setAlreadyImported(self, alreadyImported, alreadyImportedObject):
+		self.alreadyImported = alreadyImported
+		self.alreadyImportedObject = alreadyImportedObject
 
 	def isPending(self):
 		return self.status == PENDING_STATUS
@@ -258,29 +268,22 @@ class SimpleImportCommand(sublime_plugin.TextCommand):
 		self.insertMode = args.get('insert')
 
 		self.pendingImports = []
-		self.selectionsObjs = []
+		self.selectionObjects = []
 
 		selections = self.view.sel();
-
-		# if only one expression was selected
-		self.uniqueImport = selections[0] == selections[-1]
 
 		selectionIndex = 0
 
 		for selection in selections:
 
 			self.imports = ""
-			selectionObj =  ImportSelection(selection, selectionIndex)
+			selectionObj =  ImportSelection(self.view.word(selection), selectionIndex)
+			self.selectionObjects.append(selectionObj)
 
-			self.selectionsObjs.append(selectionObj)
-
-			words = re.split("{0}|\n".format(settings["separator"]), self.view.substr(selection))
+			words = re.split("{0}|\n".format(settings["separator"]), self.view.substr(selectionObj.region))
 
 			if not words[-1]:
 				words = words[:-1]
-
-			if len(words) > 1:
-				self.uniqueImport = False
 
 
 			for word in words:
@@ -291,6 +294,11 @@ class SimpleImportCommand(sublime_plugin.TextCommand):
 				word = word.strip()
 
 				importObj = Importation(word, selectionObj)
+
+				alreadyImportedObject = self.findImportationByName(importObj.name)
+				alreadyImported = self.isAlreadyImported(alreadyImportedObject)
+
+				importObj.setAlreadyImported(alreadyImported, alreadyImportedObject)
 
 				selectionObj.addImportObj(importObj)
 
@@ -309,6 +317,7 @@ class SimpleImportCommand(sublime_plugin.TextCommand):
 				self.handleImportObj(importObj, selectionObj)
 
 			selectionIndex += 1
+
 			self.resolveSelection(selectionObj)
 
 
@@ -361,9 +370,30 @@ class SimpleImportCommand(sublime_plugin.TextCommand):
 
 
 
+
+	def handleImportObj(self, importObj, selectionObj):
+
+		importObj.resolve()
+
+		if importObj.alreadyImported:
+			self.view.run_command("replace", {"characters": importObj.__str__(), "start": importObj.alreadyImportedObject.begin(), "end": importObj.alreadyImportedObject.end()})
+		else:
+			self.imports += importObj.__str__()
+
+		if not importObj.alreadyImported:
+			if self.imports != "":
+				self.imports += "\n"
+
+
+
+
 	def resolveSelection(self, selectionObj):
 		if selectionObj.areImportsPending():
 			return
+
+		if len(selectionObj.importObjects) == 1 and (self.insertMode or selectionObj.importObjects[0].alreadyImported):
+			region = self.view.word(self.view.sel()[selectionObj.index])
+			self.view.run_command("replace", {"characters": selectionObj.importObjects[0].name, "start": region.begin(), "end": region.end()})
 
 		if self.imports.strip() != "":
 			if(self.insertMode):
@@ -371,26 +401,30 @@ class SimpleImportCommand(sublime_plugin.TextCommand):
 			else:
 				self.view.run_command("replace", {"characters": self.imports, "start": selectionObj.region.begin(), "end": selectionObj.region.end()})
 
+
+
 		selectionObj.resolve()
 
-		allSelectionsResolved = True
-		for  x in self.selectionsObjs:
-			if x.isPending():
-				allSelectionsResolved = False
 
-		if allSelectionsResolved:
+
+		self.selectionObjects.remove(selectionObj)
+
+		if len(self.selectionObjects) == 0:
 			self.onDone()
+
+
 
 	def onDone(self):
 		goTo = self.view.sel()[-1].end()
 		self.view.sel().clear()
 		self.view.sel().add(sublime.Region(goTo))
+		self.selectionObjects = []
 
 	def handleClickItem(self, index):
 		importObj = self.pendingImports.pop(0)
 
 		if(index == -1):
-			importObj.selectionObj.importObjs.remove(importObj)
+			importObj.selectionObj.importObjects.remove(importObj)
 			self.resolveSelection(importObj.selectionObj)
 			return
 
@@ -400,29 +434,7 @@ class SimpleImportCommand(sublime_plugin.TextCommand):
 		self.handleImportObj(importObj, importObj.selectionObj)
 		self.resolveSelection(importObj.selectionObj)
 
-	def handleImportObj(self, importObj, selectionObj):
 
-		alreadyImportedObject = self.findImportationByName(importObj.name)
-		alreadyImported = self.isAlreadyImported(alreadyImportedObject)
-
-		importObj.resolve()
-
-		region = selectionObj.region
-
-		if alreadyImported:
-			self.view.run_command("replace", {"characters": importObj.__str__(), "start": alreadyImportedObject.begin(), "end": alreadyImportedObject.end()})
-		else:
-			self.imports += importObj.__str__()
-
-		if self.uniqueImport and (self.insertMode or alreadyImported):
-			region = self.view.sel()[selectionObj.index]
-			self.view.run_command("replace", {"characters": importObj.name, "start": self.view.sel()[selectionObj.index].begin(), "end": self.view.sel()[selectionObj.index].end()})
-
-		if alreadyImported:
-			return
-
-		if self.imports != "":
-			self.imports += "\n"
 
 
 	def findImportationByName(self, word):
