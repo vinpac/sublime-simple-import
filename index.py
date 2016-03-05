@@ -384,7 +384,6 @@ class SimpleImportCommand(sublime_plugin.TextCommand):
 			self.onDone()
 
 	def onDone(self):
-		print("=======")
 		goTo = self.view.sel()[-1].end()
 		self.view.sel().clear()
 		self.view.sel().add(sublime.Region(goTo))
