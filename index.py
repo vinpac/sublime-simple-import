@@ -327,7 +327,8 @@ class SimpleImportCommand(sublime_plugin.TextCommand):
 						continue
 					elif len(searchResults) == 1:
 						importObj.setModule(self.parseModulePath(searchResults[0]), True)
-
+				else:
+					importObj.resolve()
 			selectionIndex += 1
 
 		for selectionObj in self.selectionObjects:
@@ -337,12 +338,13 @@ class SimpleImportCommand(sublime_plugin.TextCommand):
 
 
 	def handleAllImportsForSelection(self, selectionObj):
-
 		for importObj in selectionObj.importObjects:
 			self.handleImportObj(importObj, selectionObj)
 
 	def handleImportObj(self, importObj, selectionObj):
-		importObj.resolve()
+		if importObj.isPending():
+			return
+
 		if importObj.alreadyImported:
 			self.view.run_command("replace", {"characters": importObj.__str__(), "start": importObj.alreadyImportedObject.begin(), "end": importObj.alreadyImportedObject.end()})
 			selectionObj.importObjects.remove(importObj)
@@ -374,7 +376,7 @@ class SimpleImportCommand(sublime_plugin.TextCommand):
 		allResolved = True
 
 		for _selectionObj in self.selectionObjects:
-			if _selectionObj.isPending:
+			if _selectionObj.isPending():
 				allResolved = False
 				break
 
@@ -382,6 +384,7 @@ class SimpleImportCommand(sublime_plugin.TextCommand):
 			self.onDone()
 
 	def onDone(self):
+		print("=======")
 		goTo = self.view.sel()[-1].end()
 		self.view.sel().clear()
 		self.view.sel().add(sublime.Region(goTo))
@@ -474,6 +477,7 @@ class SimpleImportCommand(sublime_plugin.TextCommand):
 
 
 		importObj.setModule(self.parseModulePath(importObj.searchResults[index]), True)
+		importObj.resolve()
 		self.handleImportObj(importObj, importObj.selectionObj)
 		self.resolveSelection(importObj.selectionObj)
 
