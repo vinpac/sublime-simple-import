@@ -327,6 +327,9 @@ class SimpleImportCommand(sublime_plugin.TextCommand):
 						continue
 					elif len(searchResults) == 1:
 						importObj.setModule(self.parseModulePath(searchResults[0]), True)
+						importObj.resolve()
+					else:
+						importObj.resolve()
 				else:
 					importObj.resolve()
 			selectionIndex += 1
