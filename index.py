@@ -6,7 +6,7 @@ IMPORT_ES6_REGEX = "import[\s]+(?P<isFromModule>\{)?[\s]*(?P<names>(([\s]*,[\s]*
 
 # Regex to ecounter an import or a require by its variable name
 # double brackets are turned on one in str.format
-ANY_IMPORT_BY_NAME_REGEX = "(import[\s]+\{{?[\s]*{name}[\s]*\}}?[\s]+from[\s]+(\'|\").+(\'|\")|((var[\s]+)?){name}[\s]*\=[\s]*require\([\s]*(\'|\").+(\'|\")[\s]*\)([\s]*\.[\s]*\w+)?)([\s]*;)?"
+ANY_IMPORT = "(import\s+\{{?\s*{name}\s*\}}?\s+from\s+(\"|\'){module}(\"|\')|(var\s+)?{name}\s*=\s*require\(\s*[\'|\"]{module}[\'|\"]\s*\)([\s]*\.[\s]*\w+)?)(\s*;)?"
 
 PENDING_STATUS = "pending"
 RESOLVED_STATUS = "resolved"
@@ -344,7 +344,7 @@ class SimpleImportCommand(sublime_plugin.TextCommand):
 		if importObj.isPending():
 			return
 
-		alreadyImportedObject = self.findImportationByName(importObj.name)
+		alreadyImportedObject = self.findImportation(".+", importObj.module)
 		alreadyImported = self.isAlreadyImported(alreadyImportedObject)
 
 		importObj.setAlreadyImported(alreadyImported, alreadyImportedObject)
@@ -487,14 +487,14 @@ class SimpleImportCommand(sublime_plugin.TextCommand):
 
 
 
-	def findImportationByName(self, word):
-		return self.view.find(r"{0}".format(ANY_IMPORT_BY_NAME_REGEX.format(name=word)), 0);
+	def findImportation(self, name, module):
+		return self.view.find(r"{0}".format(ANY_IMPORT.format(name=name, module=module)), 0);
 
 	def isAlreadyImported(self, word):
 		if isinstance(word, sublime.Region):
 			region = word
 		else:
-			region = self.findImportationByName(word)
+			region = self.findImportation(".+", word)
 		return region.begin() != -1 or region.end() != -1
 
 	def searchFiles(self, search, includeViewFile=False, caseInsesitive=False):
