@@ -55,9 +55,10 @@ class ImportSelection:
 	def getImportsString(self):
 		string = ""
 		for importObj in self.importObjects:
-			if string != "":
-				string += "\n"
-			string += importObj.__str__()
+			if not importObj.__str__() in string:
+				if string != "":
+					string += "\n"
+				string += importObj.__str__()
 
 		return string
 
@@ -268,7 +269,6 @@ class SimpleImportCommand(sublime_plugin.TextCommand):
 		self.filename = os.path.basename(self.viewPath)
 
 		self.loadSettings()
-		self.alreadyImported = []
 
 		settings = SimpleImportCommand.settings
 
