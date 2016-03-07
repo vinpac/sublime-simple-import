@@ -268,6 +268,7 @@ class SimpleImportCommand(sublime_plugin.TextCommand):
 		self.filename = os.path.basename(self.viewPath)
 
 		self.loadSettings()
+		self.alreadyImported = []
 
 		settings = SimpleImportCommand.settings
 
@@ -309,11 +310,6 @@ class SimpleImportCommand(sublime_plugin.TextCommand):
 
 				importObj = Importation(word, selectionObj)
 
-				alreadyImportedObject = self.findImportationByName(importObj.name)
-				alreadyImported = self.isAlreadyImported(alreadyImportedObject)
-
-				importObj.setAlreadyImported(alreadyImported, alreadyImportedObject)
-
 				selectionObj.addImportObj(importObj)
 
 
@@ -347,6 +343,11 @@ class SimpleImportCommand(sublime_plugin.TextCommand):
 	def handleImportObj(self, importObj, selectionObj):
 		if importObj.isPending():
 			return
+
+		alreadyImportedObject = self.findImportationByName(importObj.name)
+		alreadyImported = self.isAlreadyImported(alreadyImportedObject)
+
+		importObj.setAlreadyImported(alreadyImported, alreadyImportedObject)
 
 		if importObj.alreadyImported:
 			self.view.run_command("replace", {"characters": importObj.__str__(), "start": importObj.alreadyImportedObject.begin(), "end": importObj.alreadyImportedObject.end()})
