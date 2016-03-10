@@ -261,7 +261,9 @@ class SimpleImportCommand(sublime_plugin.TextCommand):
 
 	def run(self, edit, **args):
 
-		self.project_root = self.view.window().extract_variables()['folder']
+		window_vars = self.view.window().extract_variables()
+
+		self.project_root = window_vars['folder'] if "folder" in window_vars else ""
 		self.project_path_length = len(self.project_root)
 
 		self.viewPath = "" if not self.view.file_name() else os.path.relpath(self.view.file_name(), self.project_root)
@@ -415,6 +417,7 @@ class SimpleImportCommand(sublime_plugin.TextCommand):
 			settings.update(sublime_settings)
 
 		if os.path.isfile(os.path.join(self.project_root, settings["settings_file"])):
+
 			with open(os.path.join(self.project_root, settings["settings_file"])) as data_file:
 				try:
 					data = json.load(data_file)
