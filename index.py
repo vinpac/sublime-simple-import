@@ -73,7 +73,7 @@ class Importation:
 		match = re.match(r'{0}'.format(IMPORT_ES6_REGEX), word.strip())
 		return match
 
-	def __init__(self, word, selectionObj, alreadyImported=False, alreadyImportedObject=None):
+	def __init__(self, word, selectionObj, alreadyImported=False, alreadyImportedObject=None, context=None):
 
 		self.status = PENDING_STATUS
 		self.searchResults = []
@@ -81,6 +81,8 @@ class Importation:
 		self.fromModule = False
 		self.alternative = False
 		self.searchForFiles = False
+		self.onlyModel = False
+		self.context = context
 		self.searchFlags = {
 			"caseInsesitive": SimpleImportCommand.settings.get("search_ignorecase_by_default")
 		}
@@ -102,6 +104,9 @@ class Importation:
 
 		self.word = word
 
+		if word[0] == "=":
+			self.onlyModel = True
+			word = word[1:]
 
 		if ":" in word:
 
@@ -120,11 +125,15 @@ class Importation:
 
 
 
-
 			self.name = self.parseName(word[0])
 			self.module = self.parseModule(word[1])
 
 		else:
+
+			if(self.context):
+				if re.search(r"\=\s*{0}(\s*;\n?)?$".format(word), self.context):
+					self.onlyModel = True
+
 			self.name = self.parseName(word)
 			self.module = self.parseModule(word)
 
@@ -226,6 +235,9 @@ class Importation:
 		else:
 			name = self.name
 
+		if(self.onlyModel):
+			return "\"{0}\";".format(self.module)
+
 		return "import {0} from \"{1}\";".format(name, self.module);
 
 	def getRequire(self):
@@ -233,6 +245,9 @@ class Importation:
 			end = ".{0};".format(self.name)
 		else:
 			end = ";"
+
+		if(self.onlyModel):
+			return "require(\"{0}\");".format(self.module)
 
 		return "var {0} = require(\"{1}\"){2}".format(self.name, self.module, end)
 
@@ -310,7 +325,8 @@ class SimpleImportCommand(sublime_plugin.TextCommand):
 
 				word = word.strip()
 
-				importObj = Importation(word, selectionObj)
+
+				importObj = Importation(word, selectionObj, context=self.view.substr(self.view.line(selection)))
 
 				selectionObj.addImportObj(importObj)
 
@@ -351,7 +367,7 @@ class SimpleImportCommand(sublime_plugin.TextCommand):
 
 		importObj.setAlreadyImported(alreadyImported, alreadyImportedObject)
 
-		if importObj.alreadyImported:
+		if importObj.alreadyImported and not importObj.onlyModel:
 			self.view.run_command("replace", {"characters": importObj.__str__(), "start": importObj.alreadyImportedObject.begin(), "end": importObj.alreadyImportedObject.end()})
 			selectionObj.importObjects.remove(importObj)
 
@@ -426,7 +442,7 @@ class SimpleImportCommand(sublime_plugin.TextCommand):
 					data = {}
 
 				pData = False
-				if data["paths"]:
+				if "paths" in data:
 					for key, value in data["paths"].items():
 						pData = self.resolveSettingsForPath(key, value)
 						if pData:
@@ -509,6 +525,10 @@ class SimpleImportCommand(sublime_plugin.TextCommand):
 
 		_search = search.replace("/", "\/");
 		_search = _search.replace("*", "");
+
+		if not _search:
+			return []
+
 		regex = "({0}{1}|{0}\/index){2}$".format(_search, "(.)*" if search[-1] == "*" else "", "\.({0})".format("|".join(settings.get("extensions"))));
 
 		for dirpath, dirnames, filenames in os.walk(self.project_root, topdown=True):
