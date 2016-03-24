@@ -6,7 +6,7 @@ IMPORT_ES6_REGEX = "import[\s]+(?P<isFromModule>\{)?[\s]*(?P<names>(([\s]*,[\s]*
 
 # Regex to ecounter an import or a require by its variable name
 # double brackets are turned on one in str.format
-ANY_IMPORT = "(import\s+\{{?\s*{name}\s*\}}?\s+from\s+(\"|\'){module}(\"|\')|(var\s+)?{name}\s*=\s*require\(\s*[\'|\"]{module}[\'|\"]\s*\)([\s]*\.[\s]*\w+)?)(\s*;)?"
+ANY_IMPORT = "(import\s+\{{?\s*{name}\s*\}}?\s+from\s+(\"|\'){module}(\"|\')|((var|const|let)\s+)?{name}\s*=\s*require\(\s*[\'|\"]{module}[\'|\"]\s*\)([\s]*\.[\s]*\w+)?)(\s*;)?"
 
 PENDING_STATUS = "pending"
 RESOLVED_STATUS = "resolved"
@@ -231,7 +231,7 @@ class Importation:
 	def getEs6Import(self):
 		name = self.name
 		if self.fromModule:
-			name = "{" + self.name + "}"
+			name = "{ " + self.name + " }"
 		else:
 			name = self.name
 
@@ -249,7 +249,7 @@ class Importation:
 		if(self.onlyModel):
 			return "require(\"{0}\");".format(self.module)
 
-		return "var {0} = require(\"{1}\"){2}".format(self.name, self.module, end)
+		return "const {0} = require(\"{1}\"){2}".format(self.name, self.module, end)
 
 	def __str__(self):
 		es6_by_default = SimpleImportCommand.settings.get("es6_by_default")
