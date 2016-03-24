@@ -325,8 +325,8 @@ class SimpleImportCommand(sublime_plugin.TextCommand):
 
 				word = word.strip()
 
-
-				importObj = Importation(word, selectionObj, context=self.view.substr(self.view.line(selection)))
+				context = sublime.Region(self.view.line(selection).begin(), selectionObj.region.end())
+				importObj = Importation(word, selectionObj, context=self.view.substr(context))
 
 				selectionObj.addImportObj(importObj)
 
