@@ -362,7 +362,7 @@ class SimpleImportCommand(sublime_plugin.TextCommand):
 		if importObj.isPending():
 			return
 
-		alreadyImportedObject = self.findImportation(".+", importObj.module)
+		alreadyImportedObject = self.findAnyImportation(importObj.name, importObj.module)
 		alreadyImported = self.isAlreadyImported(alreadyImportedObject)
 
 		importObj.setAlreadyImported(alreadyImported, alreadyImportedObject)
@@ -509,11 +509,18 @@ class SimpleImportCommand(sublime_plugin.TextCommand):
 	def findImportation(self, name, module):
 		return self.view.find(r"{0}".format(ANY_IMPORT.format(name=name, module=module)), 0);
 
+	def findAnyImportation(self, name, module):
+		region = self.findImportation(".+", module)
+		if region.begin() == -1:
+			region = self.findImportation(name, ".+")
+		return region
+
 	def isAlreadyImported(self, word):
 		if isinstance(word, sublime.Region):
 			region = word
 		else:
-			region = self.findImportation(".+", word)
+			region = self.findAnyImportation(".+", word)
+
 		return region.begin() != -1 or region.end() != -1
 
 	def searchFiles(self, search, includeViewFile=False, caseInsesitive=False):
