@@ -52,13 +52,13 @@ class ImportSelection:
 
 		return isPending
 
-	def getImportsString(self):
+	def getImportsString(self, forceFull=True):
 		string = ""
 		for importObj in self.importObjects:
-			if not importObj.__str__() in string:
+			if not importObj.__str__(forceFull=forceFull) in string:
 				if string != "":
 					string += "\n"
-				string += importObj.__str__()
+				string += importObj.__str__(forceFull=forceFull)
 
 		return string
 
@@ -228,36 +228,36 @@ class Importation:
 
 
 
-	def getEs6Import(self):
+	def getEs6Import(self, forceFull=False):
 		name = self.name
 		if self.fromModule:
 			name = "{ " + self.name + " }"
 		else:
 			name = self.name
 
-		if(self.onlyModel):
+		if(self.onlyModel and not forceFull):
 			return "\"{0}\";".format(self.module)
 
 		return "import {0} from \"{1}\";".format(name, self.module);
 
-	def getRequire(self):
+	def getRequire(self, forceFull=False):
 		if self.fromModule:
 			end = ".{0};".format(self.name)
 		else:
 			end = ";"
 
-		if(self.onlyModel):
+		if(self.onlyModel and not forceFull):
 			return "require(\"{0}\");".format(self.module)
 
 		return "const {0} = require(\"{1}\"){2}".format(self.name, self.module, end)
 
-	def __str__(self):
+	def __str__(self, forceFull=False):
 		es6_by_default = SimpleImportCommand.settings.get("es6_by_default")
 
 		if es6_by_default if self.alternative else not es6_by_default :
-			return self.getRequire()
+			return self.getRequire(forceFull)
 		else:
-			return self.getEs6Import()
+			return self.getEs6Import(forceFull)
 
 class ReplaceCommand(sublime_plugin.TextCommand):
     def run(self, edit, characters, start=0, end=False):
@@ -368,7 +368,7 @@ class SimpleImportCommand(sublime_plugin.TextCommand):
 		importObj.setAlreadyImported(alreadyImported, alreadyImportedObject)
 
 		if importObj.alreadyImported and not importObj.onlyModel:
-			self.view.run_command("replace", {"characters": importObj.__str__(), "start": importObj.alreadyImportedObject.begin(), "end": importObj.alreadyImportedObject.end()})
+			self.view.run_command("replace", {"characters": importObj.__str__(forceFull=True), "start": importObj.alreadyImportedObject.begin(), "end": importObj.alreadyImportedObject.end()})
 			selectionObj.importObjects.remove(importObj)
 
 
@@ -381,7 +381,7 @@ class SimpleImportCommand(sublime_plugin.TextCommand):
 			region = self.view.word(self.view.sel()[selectionObj.index])
 			self.view.run_command("replace", {"characters": selectionObj.importObjects[0].name, "start": region.begin(), "end": region.end()})
 
-		importsString = selectionObj.getImportsString()
+		importsString = selectionObj.getImportsString(self.insertMode)
 
 
 

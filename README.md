@@ -26,12 +26,12 @@ This is the syntax. Simple Import offers you some to import a module, like, wher
 
 **!** Indicates if the search will be case sensitive or not. **True** by default
 
-**$** Indicates if this is a ES6 Syntax import or not. If you add this, you will have `var Name = require("Module")`
+**$** Indicates if this is a ES6 Syntax import or not. If you add this, you will have `const Name = require("Module")`
 
  **Important - **  Double Separators between the Name and the Module make it an "import of property "
 
 	ActionTypes::AppConstants`  = `import {ActionTypes} from 'AppConstants'
-	ActionTypes::AppConstants:$`  = `var ActionTypes = require('AppConstants').ActionTypes
+	ActionTypes::AppConstants:$`  = `const ActionTypes = require('AppConstants').ActionTypes
 
 Every indicator or default setting can be defined in your project and in your sublime settings. Look at  [Configurations](#configurations) (optional)
 
