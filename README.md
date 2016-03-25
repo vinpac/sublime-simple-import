@@ -3,7 +3,7 @@ Simple Import JS
 
 `Simple import` is a plugin for Sublime Text that imports your modules. Just select select the module you want to import and select "Simple Import: insert imports". You can import as many modules you want at once.
 
-![Example image](https://raw.githubusercontent.com/vini175pa/simple-import-js/master/example.gif)
+![Example image](https://github.com/vini175pa/sublime-simple-import/blob/master/example.gif)
 
 
 
@@ -130,7 +130,7 @@ Just clone this repository in your packages folder and add the key bindings.
 
  - Open the Command Palette and find `Browse Packages`.  Select it and the packages folder will open.
  - Clone this repository in this folder
-	 - On Terminal, clone this repository: `git clone https://github.com/vini175pa/simple-import-js.git`
+	 - On Terminal, clone this repository: `git clone https://github.com/vini175pa/sublime-simple-import.git`
 	 - or Download this repository as `rar` and put the content inside the packages folder
  - [Add the key bindings](#key-binding) (optional)
 
