@@ -89,6 +89,7 @@ class Importation:
 		self.alreadyImported = alreadyImported
 		self.alreadyImportedObject = alreadyImportedObject
 
+
 		word = word.strip()
 
 		isImport = Importation.isImportWord(word)
@@ -112,7 +113,12 @@ class Importation:
 
 			if "::" in word:
 				word = re.split("::|:", word)
-				self.fromModule = True
+				if(word[0] == "*"):
+					self.fromModule = "all"
+					word.pop(0)
+				else:
+					self.fromModule = True
+
 			else:
 				word = word.split(":")
 
@@ -131,7 +137,7 @@ class Importation:
 		else:
 
 			if(self.context):
-				if re.search(r"\=\s*{0}(\s*;\n?)?$".format(word), self.context):
+				if re.search(r"\=\s*{0}(\s*;\n?)?$".format(re.escape(word)), self.context):
 					self.onlyModel = True
 
 			self.name = self.parseName(word)
@@ -231,7 +237,10 @@ class Importation:
 	def getEs6Import(self, forceFull=False):
 		name = self.name
 		if self.fromModule:
-			name = "{ " + self.name + " }"
+			if self.fromModule == "all":
+				name = "* as " + self.name
+			else:
+				name = "{ " + self.name + " }"
 		else:
 			name = self.name
 
@@ -530,12 +539,13 @@ class SimpleImportCommand(sublime_plugin.TextCommand):
 
 		settings = SimpleImportCommand.settings
 
-		_search = search.replace("/", "\/");
-		_search = _search.replace("*", "");
+		_search = search.replace("*", "");
+		_search = re.escape(_search)
 
 		if not _search:
 			return []
 
+		# (example|example/index)\.(js|jsx)$
 		regex = "({0}{1}|{0}\/index){2}$".format(_search, "(.)*" if search[-1] == "*" else "", "\.({0})".format("|".join(settings.get("extensions"))));
 
 		for dirpath, dirnames, filenames in os.walk(self.project_root, topdown=True):
