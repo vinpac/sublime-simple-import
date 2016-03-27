@@ -6,6 +6,19 @@ Simple Import JS
 ![Example image](https://github.com/vini175pa/sublime-simple-import/blob/master/example.gif)
 
 
+Install
+-------------
+
+Clone this repository in your packages folder and add the key bindings.
+
+ - Open the Command Palette and find `Browse Packages`.  Select it and the packages folder will open.
+ - Clone this repository in this folder
+	 - On Terminal, clone this repository: `git clone https://github.com/vini175pa/sublime-simple-import.git`
+	 - or Download this repository as `rar` and put the content inside the packages folder
+ - [Add the key bindings](#key-binding) (optional)
+ 
+This package will be added to Package Control soon.
+
 
 ----------
 
@@ -125,16 +138,6 @@ If you want to use different settings for specific folders or files you can! In 
 It only works on your `.simple-import.json` and won't work on sublime settings.
 
 
-Installation
--------------
-
-Just clone this repository in your packages folder and add the key bindings.
-
- - Open the Command Palette and find `Browse Packages`.  Select it and the packages folder will open.
- - Clone this repository in this folder
-	 - On Terminal, clone this repository: `git clone https://github.com/vini175pa/sublime-simple-import.git`
-	 - or Download this repository as `rar` and put the content inside the packages folder
- - [Add the key bindings](#key-binding) (optional)
 
 # Key Binding
 Just add this in your **Preferences > Key Bindings - User**
@@ -142,6 +145,23 @@ Just add this in your **Preferences > Key Bindings - User**
 	{ "keys": ["ctrl+alt+j"], "command": "simple_import"},
 	{ "keys": ["ctrl+alt+i"], "command": "simple_import", "args": { "insert": true}},
 	{ "keys": ["ctrl+alt+u"], "command": "simple_import", "args": { "resolve": true}}
+
+Simple Import's Goal
+-------------
+Simple Import is being built to help importing any module in any language not only JS. Version 2.x will soon be released bringing huge updates. It is being totally rewritten to better handle imports in any language based on a json that will hold the way importing works on each language. Therefore, adding support to a new language will be easy, by just adding:
+```
+...
+"Sass": {
+   "extensions": ["scss", "sass"]
+   "imports": [
+   	{ 
+   	   "tests": [ "{module}", "@import {module}"],
+   	   "result": "@import '{module}'"
+   	}
+   ]
+}
+...
+```
 
 
 Contributing
