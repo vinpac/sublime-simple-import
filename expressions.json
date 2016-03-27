@@ -1,0 +1,22 @@
+{
+  "javascript": {
+    "extensions": ["js", "jsx"],
+    "imports" : {
+      "es6": {
+        "default": true,
+        "tests": [
+          "import {variable}",
+          "import {variable} from {module}"
+        ],
+        "result": "import {variable} from \"{module}\""
+      },
+      "require": {
+        "tests": [
+          "(const|let|var) {variable}",
+          "(const|let|var) {variable} = {module}"
+        ],
+        "result": "const {variable} = require(\"{module}\")"
+      }
+    }
+  }
+}
