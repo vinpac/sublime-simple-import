@@ -20,8 +20,6 @@ Clone this repository in your packages folder and add the key bindings.
 This package will be added to Package Control soon.
 
 
-----------
-
 Syntax
 -------------
 
