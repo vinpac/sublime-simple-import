@@ -1,7 +1,7 @@
 {
   "javascript": {
     "extensions": ["js", "jsx"],
-    "imports" : {
+    "handlers" : {
       "es6": {
         "default": true,
         "tests": [
