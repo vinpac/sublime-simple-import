@@ -6,8 +6,19 @@ Simple Import JS
 ![Example image](https://github.com/vini175pa/sublime-simple-import/blob/master/example.gif)
 
 
+Install
+-------------
 
-----------
+Clone this repository in your packages folder and add the key bindings.
+
+ - Open the Command Palette and find `Browse Packages`.  Select it and the packages folder will open.
+ - Clone this repository in this folder
+	 - On Terminal, clone this repository: `git clone https://github.com/vini175pa/sublime-simple-import.git`
+	 - or Download this repository as `rar` and put the content inside the packages folder
+ - [Add the key bindings](#key-binding) (optional)
+ 
+This package will be added to Package Control soon.
+
 
 Syntax
 -------------
@@ -28,10 +39,12 @@ This is the syntax. Simple Import offers you some to import a module, like, wher
 
 **$** Indicates if this is a ES6 Syntax import or not. If you add this, you will have `const Name = require("Module")`
 
- **Important - **  Double Separators between the Name and the Module make it an "import of property "
+ **Important - **  Double Separators between the Name and the Module make it an "import from property from module "
 
-	ActionTypes::AppConstants`  = `import {ActionTypes} from 'AppConstants'
-	ActionTypes::AppConstants:$`  = `const ActionTypes = require('AppConstants').ActionTypes
+	A::B`    = `import { A } from 'B'
+	A::B:$`  = `const A = require('B').A
+	*::A`    = `import * as A from 'A'
+	*::A:B`  = `import * as A from 'B'
 
 Every indicator or default setting can be defined in your project and in your sublime settings. Look at  [Configurations](#configurations) (optional)
 
@@ -123,16 +136,6 @@ If you want to use different settings for specific folders or files you can! In 
 It only works on your `.simple-import.json` and won't work on sublime settings.
 
 
-Installation
--------------
-
-Just clone this repository in your packages folder and add the key bindings.
-
- - Open the Command Palette and find `Browse Packages`.  Select it and the packages folder will open.
- - Clone this repository in this folder
-	 - On Terminal, clone this repository: `git clone https://github.com/vini175pa/sublime-simple-import.git`
-	 - or Download this repository as `rar` and put the content inside the packages folder
- - [Add the key bindings](#key-binding) (optional)
 
 # Key Binding
 Just add this in your **Preferences > Key Bindings - User**
@@ -140,6 +143,23 @@ Just add this in your **Preferences > Key Bindings - User**
 	{ "keys": ["ctrl+alt+j"], "command": "simple_import"},
 	{ "keys": ["ctrl+alt+i"], "command": "simple_import", "args": { "insert": true}},
 	{ "keys": ["ctrl+alt+u"], "command": "simple_import", "args": { "resolve": true}}
+
+Simple Import's Goal
+-------------
+Simple Import is being built to help importing any module in any language not only JS. Version 2.x will soon be released bringing huge updates. It is being totally rewritten to better handle imports in any language based on a json that will hold the way importing works on each language. Therefore, adding support to a new language will be easy, by just adding:
+```
+...
+"Sass": {
+   "extensions": ["scss", "sass"]
+   "imports": [
+   	{ 
+   	   "tests": [ "{module}", "@import {module}"],
+   	   "result": "@import '{module}'"
+   	}
+   ]
+}
+...
+```
 
 
 Contributing
