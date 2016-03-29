@@ -91,6 +91,7 @@ class Importation:
 
 
 		word = word.strip()
+		self.word = word
 
 		isImport = Importation.isImportWord(word)
 		if isImport:
@@ -135,10 +136,6 @@ class Importation:
 			self.module = self.parseModule(word[1])
 
 		else:
-
-			if(self.context):
-				if re.search(r"\=\s*{0}(\s*;\n?)?$".format(re.escape(word)), self.context):
-					self.onlyModel = True
 
 			self.name = self.parseName(word)
 			self.module = self.parseModule(word)
@@ -235,6 +232,10 @@ class Importation:
 
 
 	def getEs6Import(self, forceFull=False):
+		if(self.context):
+				if re.search(r"from\s*{0}(\s*;\n?)?$".format(re.escape(self.word)), self.context):
+					self.onlyModel = True
+
 		name = self.name
 		if self.fromModule:
 			if self.fromModule == "all":
@@ -250,6 +251,10 @@ class Importation:
 		return "import {0} from \"{1}\";".format(name, self.module);
 
 	def getRequire(self, forceFull=False):
+		if(self.context):
+				if re.search(r"\=\s*{0}(\s*;\n?)?$".format(re.escape(self.word)), self.context):
+					self.onlyModel = True
+
 		if self.fromModule:
 			end = ".{0};".format(self.name)
 		else:
