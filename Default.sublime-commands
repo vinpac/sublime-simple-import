@@ -7,10 +7,5 @@
     "caption": "SublimeImportJS: import selected expressions",
     "command": "import_es6",
     "args": {"insert": true}
-  },
-  {
-    "caption": "SublimeImportJS: import all used modules",
-    "command": "import_es6",
-    "args": {"resolve": true}
   }
 ]
