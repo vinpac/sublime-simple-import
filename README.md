@@ -6,18 +6,28 @@ Simple Import JS
 ![Example image](https://raw.githubusercontent.com/vini175pa/sublime-simple-import/master/example.gif)
 
 
-Install
--------------
+Installing
+----------
 
-Clone this repository in your packages folder and add the key bindings.
+### With Package Control (recommended)
+1. Install [Package Control](https://sublime.wbond.net/installation)
+2. Run “Package Control: Install Package” command
+3. Find and install the `Simple Import` plugin.
+4. Restart Sublime Text if there are issues.
 
- - Open the Command Palette and find `Browse Packages`.  Select it and the packages folder will open.
- - Clone this repository in this folder
-	 - On Terminal, clone this repository: `git clone https://github.com/vini175pa/sublime-simple-import.git`
-	 - or Download this repository as `rar` and put the content inside the packages folder
- - [Add the key bindings](#key-binding) (optional)
- 
-This package will be added to Package Control soon.
+### Manually
+
+Clone the repository in your Sublime Text "Packages" directory:
+
+    git clone https://github.com/vini175pa/sublime-simple-import.git
+
+The "Packages" directory is located at:
+
+* OS X: `~/Library/Application Support/Sublime Text 3/Packages/`
+
+* Linux: `~/.config/sublime-text-3/Packages/`
+
+* Windows: `%APPDATA%\Sublime Text 3\Packages\`
 
 
 Syntax
@@ -138,11 +148,10 @@ It only works on your `.simple-import.json` and won't work on sublime settings.
 
 
 # Key Binding
-Just add this in your **Preferences > Key Bindings - User**
+They are added by default, but if you want to change them just add in your **Preferences > Key Bindings - User**:
 
 	{ "keys": ["ctrl+alt+j"], "command": "simple_import"},
-	{ "keys": ["ctrl+alt+i"], "command": "simple_import", "args": { "insert": true}},
-	{ "keys": ["ctrl+alt+u"], "command": "simple_import", "args": { "resolve": true}}
+	{ "keys": ["ctrl+alt+i"], "command": "simple_import", "args": { "insert": true}}
 
 Simple Import's Goal
 -------------
