@@ -1,16 +1,15 @@
 [
   {
+    "caption": "SublimeImportJS: reload interpreters",
+    "command": "simple_import_intepreters"
+  },
+  {
     "caption": "SublimeImportJS: replaces selection expression with imports",
-    "command": "import_es6"
+    "command": "simple_import"
   },
   {
     "caption": "SublimeImportJS: import selected expressions",
-    "command": "import_es6",
+    "command": "simple_import",
     "args": {"insert": true}
-  },
-  {
-    "caption": "SublimeImportJS: import all used modules",
-    "command": "import_es6",
-    "args": {"resolve": true}
   }
 ]

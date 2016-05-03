@@ -7,10 +7,10 @@ class SImport:
     self.expression = expression
     self.context = context
     self.sSelection = sSelection
-    self.values = handler.values(expression, context)
+    self.statements = handler.getStatements(expression, context)
 
-  def __str__():
-    return self.string.format(self.variable, self.module)
+  def __str__(self):
+    return self.handler.resolve(self.statements)
 
 class Interpreter:
 
@@ -41,7 +41,7 @@ class Interpreter:
     return SImport(self.getHandlerFor(expression, context), expression, context, sSelection)
 
   class Handler:
-
+      
     @staticmethod
     def fromDict(obj):
       handler = None
@@ -63,13 +63,35 @@ class Interpreter:
     def test(self, expression, context):
       return not not self.getMatcherFor(expression, context)
 
-    def values(self, expression, context):
+    def getStatements(self, expression, context):
       matcher = self.getMatcherFor(expression, context)
       if matcher:
-        return matcher.match(context).groupdict()
+        statements = matcher.match(context).groupdict()
+        values = list(statements.values())
+      else:
+        statements = {}
+        values = SimpleImport.expressionInContext(expression, context).split(":")
 
-    def resolve(values):
-      return self.result.replace(**values)
+      keys = self.keys()
+      index = 0
+      length = len(values)
+
+      for key in keys:
+        statements[key] = values[index]
+        index = min(index + 1, length - 1)
+      print(statements)
+      return statements
+
+    def keys(self):
+      arr = re.findall(r"\{\w+\}", self.result)
+      return [ x[1:-1] for x in arr]
+
+    def resolve(self, statements):
+      result = self.result
+      for key in statements:
+        result = result.replace("{"+key+"}", statements[key])
+      return result
+
 
   class Matcher:
 
@@ -125,8 +147,15 @@ class SimpleImport():
   interpreters = {}
 
   @staticmethod
+  def expressionInContext(expression, context):
+    match = re.search(r"[^\s]*{0}".format(expression), context)
+    if match:
+      return match.group(0)
+    return expression
+
+  @staticmethod
   def loadInterpreters():
-    with open(os.path.join(os.path.dirname(os.path.realpath(__file__)), "interpreters.json")) as data_file:
+    with open(path.join(path.dirname(path.realpath(__file__)), "interpreters.json")) as data_file:
       try:
         interpreters = json.load(data_file)
       except ValueError:
@@ -135,6 +164,12 @@ class SimpleImport():
 
     for key in interpreters:
       SimpleImport.interpreters[ interpreters[key]["syntax"] ] = Interpreter(interpreters[key])
+
+
+class SimpleImportInterpretersCommand(sublime_plugin.TextCommand):
+  def run(self, edit):
+    SimpleImport.loadInterpreters()
+    print("Interpreters reloaded")
 
 class SimpleImportCommand(sublime_plugin.TextCommand):
 
@@ -158,12 +193,8 @@ class SimpleImportCommand(sublime_plugin.TextCommand):
       expression = self.view.substr(region)
       context_content = self.view.substr(context)
 
-      # sImport = SImport(expression, context_content, sSelection)
-      # sImport.resolve(self.interpreter)
-      # print(sImport.__str__())
-
       sImport = self.interpreter.resolve(expression, context_content, sSelection)
-      print(sImport.values)
+      print(sImport.__str__())
 
       #self.view.run_command("replace", {"characters": result.__str__(), "start": result.region.begin(), "end": result.region.end()})
 
@@ -173,7 +204,7 @@ class SimpleImportCommand(sublime_plugin.TextCommand):
 
   def getInterpreter(self, syntax):
     for key in SimpleImport.interpreters:
-      if re.search(r"^{0}".format(key), syntax, re.IGNORECASE):
+      if re.search(r"^\.?{0}".format(key), syntax, re.IGNORECASE):
         return SimpleImport.interpreters[key]
     return None
 

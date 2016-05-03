@@ -10,24 +10,37 @@
         ],
         "result": "import {variable} from \"{module}\""
       },
+      "import_from": {
+        "match": [
+          "extends {module}\\.{submodule}"
+        ],
+        "result": "import { {submodule} } from \"{module}\""
+      },
       "require": {
         "match": [
           "(const|let|var) {variable}",
-          "(const|let|var) {variable} = {module}"
+          "(const|let|var) {variable} = {module}",
+          "require {variable}"
         ],
         "result": "const {variable} = require(\"{module}\")"
       }
+    },
+    "join": {
+      "import_from_and": {
+        "match": ["import", "import_from"],
+        "result": "const {variable}, { {...submodules} } from \"{module}\""
+      }
     }
   },
-  "less": {
-    "syntax": "less",
+  "sass": {
+    "syntax": "scss",
     "handlers": {
       "import": {
         "default": true,
         "match": [
           "@import {module}"
         ],
-        "result": "@import {\"module}\""
+        "result": "@import \"_{module}\""
       }
     }
   }
