@@ -1,21 +1,33 @@
 {
   "javascript": {
-    "extensions": ["js", "jsx"],
+    "syntax": "javascript",
     "handlers" : {
-      "es6": {
+      "import": {
         "default": true,
-        "tests": [
+        "match": [
           "import {variable}",
           "import {variable} from {module}"
         ],
         "result": "import {variable} from \"{module}\""
       },
       "require": {
-        "tests": [
+        "match": [
           "(const|let|var) {variable}",
           "(const|let|var) {variable} = {module}"
         ],
         "result": "const {variable} = require(\"{module}\")"
+      }
+    }
+  },
+  "less": {
+    "syntax": "less",
+    "handlers": {
+      "import": {
+        "default": true,
+        "match": [
+          "@import {module}"
+        ],
+        "result": "@import {\"module}\""
       }
     }
   }

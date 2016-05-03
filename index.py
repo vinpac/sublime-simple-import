@@ -1,15 +1,13 @@
-import os, re, json
+import sublime, sublime_plugin, re, json
+from os import path
 
 class SImport:
-  def __init__(self, expression, context, sSelection, variable=None, module=None, parser=None, region=None):
+  def __init__(self, handler, expression, context, sSelection):
+    self.handler = handler
     self.expression = expression
     self.context = context
     self.sSelection = sSelection
-    self.variable = variable
-    self.module = module
-    self.parser = parser
-    self.parser = parser
-    self.resolved = not not module
+    self.values = handler.values(expression, context)
 
   def __str__():
     return self.string.format(self.variable, self.module)
@@ -17,90 +15,84 @@ class SImport:
 class Interpreter:
 
   def __init__(self, obj):
+    self.syntax = obj["syntax"]
     self.handlers = self.parseHandlers(obj["handlers"])
 
   def parseHandlers(self, _handlers):
     handlers = []
     for key in _handlers:
-      handlers.append( Interpreter.Handler.fromDict( key, _handlers[key] ) )
-      if( handlers[-1].default ):
-        self.default = handlers[-1]
+      handlers.append( Interpreter.Handler.fromDict( _handlers[key] ) )
+      if( "default" in _handlers[key] and _handlers[key]["default"] == True):
+        self.defaultHandler = handlers[-1]
 
-    if not self.default and len(handlers):
-      self.default = handlers[1]
+    if not self.defaultHandler and len(handlers):
+      self.defaultHandler = handlers[1]
 
     return handlers
 
-  def handle(self, sImport):
+  def getHandlerFor(self, expression, context):
     for handler in self.handlers:
-      result = handler.handle(sImport)
-      if result:
-        return result
+      if handler.test(expression, context):
+        return handler
 
-    if not result:
-      return self.default.resolve(sImport)
+    return self.defaultHandler
+
+  def resolve(self, expression, context, sSelection):
+    return SImport(self.getHandlerFor(expression, context), expression, context, sSelection)
 
   class Handler:
 
     @staticmethod
-    def fromDict(key, obj):
+    def fromDict(obj):
       handler = None
       try:
-        default = obj["default"] == True
-        handler = Interpreter.Handler(key, obj["tests"], obj["result"], default=default)
+        handler = Interpreter.Handler(obj["match"], obj["result"])
       except KeyError:
-        try:
-          handler = Interpreter.Handler(key, obj["tests"], obj["result"])
-        except KeyError:
-          print("Error creating Handler from dict")
+        print("Error creating Handler from dict")
       return handler
 
-    def __init__(self, key, tests, result, default=False):
-      self.key = key
-      self.tests = [ self.parseTest(test) for test in tests ]
-      self.result = self.parseResult(result)
-      self.default = default
+    def __init__(self, matchers, result, default=False):
+      self.matchers = [ Interpreter.Matcher(expression) for expression in matchers ]
+      self.result = result.strip()
+
+    def getMatcherFor(self, expression, context):
+      for matcher in self.matchers:
+        if matcher.match(context):
+          return matcher
 
     def test(self, expression, context):
-      result = None
-      for test in self.tests:
+      return not not self.getMatcherFor(expression, context)
 
-        if "{module}" in test:
-          test = test.replace("{variable}", "(.+)")
+    def values(self, expression, context):
+      matcher = self.getMatcherFor(expression, context)
+      if matcher:
+        return matcher.match(context).groupdict()
 
-        if re.search(re.compile(test.format(variable=expression, expression=expression, module=expression) + "$"), context):
-          result = test
-      return result
+    def resolve(values):
+      return self.result.replace(**values)
 
-    def handle(self, sImport):
-      matched = self.test(sImport.expression, sImport.context)
-      if not matched:
-        return matched
+  class Matcher:
 
-      if "{variable}" in matched and "{module}" in matched:
-        return self.resolve(sImport.expression, sImport.expression)
-      else:
-        return self.resolve(sImport.expression, sImport.expression)
+    @staticmethod
+    def generateRegex(expression):
+      regex = expression
+      keys = re.findall(r"\{\w+\}", expression)
+      for key in keys:
+        regex = regex.replace(key, "(?P<" + key[1:-1] + ">[^\s]+)")
+      regex = regex.replace(" ", "\s+")
+      return regex
 
-    def resolve(self, variable, module):
-      return SImport( self.result, variable, module )
+    def __init__(self, expression):
+      self.expression = expression
+      self.regex_expression = Interpreter.Matcher.generateRegex(expression)
 
-    def parseTest(self, test):
-      test = test.strip()
-      # test = test.replace("{variable}", "(?P<variable>.+)")
-      # test = test.replace("{module}", "(?P<module>.+)")
-      # test = test.replace("{expression}", "(?P<expression>[^\s]+)")
-      # test = test.replace(" ", "\s+")
-      #if "{module}" in test:
-      # test = test.replace("{variable}", "(.+)")
+    def match(self, string):
+      return re.search(re.compile(self.regex_expression + "$"), string)
 
-      #test = test.replace("{module}", "{1}")
-      #test = test.replace("{expression}", "(?P<expression>[^\s]+)")
-      test = test.replace(" ", "\s+")
-      return test
-
-    def parseResult(self, result):
-      return result.strip()
+    def resolve(self, string):
+      match = self.match(string)
+      if match:
+        return math.groupdict()
 
 # Stands for Simple Selection
 class SSelection:
@@ -129,31 +121,30 @@ class SSelection:
 
     return pending
 
-class SimpleImportCommand(sublime_plugin.TextCommand):
-
+class SimpleImport():
   interpreters = {}
 
   @staticmethod
-  def loadParsers():
-    with open(os.path.join(os.path.dirname(os.path.realpath(__file__)), "expressions.json")) as data_file:
+  def loadInterpreters():
+    with open(os.path.join(os.path.dirname(os.path.realpath(__file__)), "interpreters.json")) as data_file:
       try:
         interpreters = json.load(data_file)
       except ValueError:
-        print("SIMPLE-IMPORT ERROR :: Error trying to load {0} on project root.".format("expressions.json"))
+        print("SIMPLE-IMPORT ERROR :: Error trying to load {0} on project root.".format("interpreters.json"))
         interpreters = {}
 
     for key in interpreters:
-      interpreter = Interpreter(interpreters[key])
-      for ext in interpreters[key]["extensions"]:
-        SimpleImport.interpreters[ ext ] = interpreter
+      SimpleImport.interpreters[ interpreters[key]["syntax"] ] = Interpreter(interpreters[key])
+
+class SimpleImportCommand(sublime_plugin.TextCommand):
 
   def run(self, edit):
-    current_file_extesion = "js"
+    
+    syntax = path.basename(self.view.settings().get('syntax')).lower() 
+    self.interpreter = self.getInterpreter(syntax)
 
-    try:
-      self.interpreter = SimpleImport.interpreters[current_file_extesion]
-    except KeyError:
-      print("Simple import does not support '.{0}' files yet".format(current_file_extesion))
+    if not self.interpreter:
+      print("Simple import does not support '.{0}' syntax yet".format(syntax))
       return
 
     selections = self.view.sel()
@@ -165,17 +156,27 @@ class SimpleImportCommand(sublime_plugin.TextCommand):
       sSelection = SSelection( region, context, selection_index )
 
       expression = self.view.substr(region)
-      content_context = self.view.substr(context)
+      context_content = self.view.substr(context)
 
-      sImport = SImport( expression, content_context, sSelection)
+      # sImport = SImport(expression, context_content, sSelection)
+      # sImport.resolve(self.interpreter)
+      # print(sImport.__str__())
 
-      result = self.interpreter.handle(sImport)
+      sImport = self.interpreter.resolve(expression, context_content, sSelection)
+      print(sImport.values)
 
-      self.view.run_command("replace", {"characters": result.__str__(), "start": result.region.begin(), "end": result.region.end()})
+      #self.view.run_command("replace", {"characters": result.__str__(), "start": result.region.begin(), "end": result.region.end()})
 
 
   def handle(self):
     print("handle")
+
+  def getInterpreter(self, syntax):
+    for key in SimpleImport.interpreters:
+      if re.search(r"^{0}".format(key), syntax, re.IGNORECASE):
+        return SimpleImport.interpreters[key]
+    return None
+
 
 class ReplaceCommand(sublime_plugin.TextCommand):
     def run(self, edit, characters, start=0, end=False):
@@ -183,4 +184,4 @@ class ReplaceCommand(sublime_plugin.TextCommand):
         end = self.view.size()
       self.view.replace(edit,sublime.Region(start, end), characters)
 
-SimpleImport.loadParsers()
+SimpleImport.loadInterpreters()
