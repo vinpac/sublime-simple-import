@@ -8,6 +8,16 @@
           "import {variable}",
           "import {variable} from {module}"
         ],
+        "search": "module",
+        "parse": {
+          "module": {
+            "lower": true,
+            "remove": ""
+          },
+          "variable": {
+            "remove": "-"
+          }
+        },
         "result": "import {variable} from \"{module}\""
       },
       "import_from": {
@@ -18,9 +28,9 @@
       },
       "require": {
         "match": [
+          "require {variable}",
           "(const|let|var) {variable}",
-          "(const|let|var) {variable} = {module}",
-          "require {variable}"
+          "(const|let|var) {variable} = {module}"
         ],
         "result": "const {variable} = require(\"{module}\")"
       }

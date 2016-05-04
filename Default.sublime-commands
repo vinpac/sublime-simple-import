@@ -1,14 +1,14 @@
 [
   {
-    "caption": "SublimeImportJS: reload interpreters",
+    "caption": "Simple Import: reload interpreters",
     "command": "simple_import_intepreters"
   },
   {
-    "caption": "SublimeImportJS: replaces selection expression with imports",
+    "caption": "Simple Import: replaces selection expression with imports",
     "command": "simple_import"
   },
   {
-    "caption": "SublimeImportJS: import selected expressions",
+    "caption": "Simple Import: import expression at the beginning",
     "command": "simple_import",
     "args": {"insert": true}
   }
