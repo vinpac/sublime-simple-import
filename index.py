@@ -2,96 +2,126 @@ import sublime, sublime_plugin, re, json
 from os import path
 
 class SImport:
-  def __init__(self, handler, expression, context, sSelection):
-    self.handler = handler
-    self.expression = expression
-    self.context = context
+  def __init__(self, interpreted, sSelection):
+    self.interpreted = interpreted
+    self.handler = interpreted.handler
     self.sSelection = sSelection
-    self.statements = handler.getStatements(expression, context)
+    self.statements = self.handler.getStatements(sSelection.expression, sSelection.context, interpreted.match)
 
   def __str__(self):
-    return self.handler.resolve(self.statements)
+    return self.handler.getResultWithStatements(self.statements)
+
+# =============================================================================================
 
 class Interpreter:
 
   def __init__(self, obj):
     self.syntax = obj["syntax"]
-    self.handlers = self.parseHandlers(obj["handlers"])
+    self.createHandlers(obj["handlers"])
+    self.createKeys(obj["keys"] if "keys" in obj else [])
 
-  def parseHandlers(self, _handlers):
-    handlers = []
-    for key in _handlers:
-      handlers.append( Interpreter.Handler.fromDict( _handlers[key] ) )
-      if( "default" in _handlers[key] and _handlers[key]["default"] == True):
-        self.defaultHandler = handlers[-1]
+  def createKeys(self, keys):
+    self.keys_names = []
+    self.keys = []
+    for name in keys:
+      self.keys_names.append(name)
+      self.keys.append(Interpreter.Key(name, keys[name]))
 
-    if not self.defaultHandler and len(handlers):
-      self.defaultHandler = handlers[1]
-
-    return handlers
-
-  def getHandlerFor(self, expression, context):
-    for handler in self.handlers:
-      if handler.test(expression, context):
-        return handler
-
-    return self.defaultHandler
-
-  def resolve(self, expression, context, sSelection):
-    return SImport(self.getHandlerFor(expression, context), expression, context, sSelection)
-
-  class Handler:
-      
-    @staticmethod
-    def fromDict(obj):
-      handler = None
+  def createHandlers(self, handlers):
+    self.handlers = []
+    for key in handlers:
+      obj = handlers[key]
       try:
         handler = Interpreter.Handler(obj["match"], obj["result"])
       except KeyError:
         print("Error creating Handler from dict")
-      return handler
 
-    def __init__(self, matchers, result, default=False):
+      self.handlers.append( handler )
+
+      if( "default" in handlers[key] and handlers[key]["default"] == True):
+        self.defaultHandler = self.handlers[-1]
+
+    if not self.defaultHandler and len(handlers):
+      self.defaultHandler = self.handlers[1]
+
+  def getKeys():
+    return self.keys
+
+  def getKeysNames():
+    return self.keys_names
+
+  def interprete(self, expression, context):
+    for handler in self.handlers:
+      match = handler.match(expression, context)
+      if match:
+        return Interpreter.Interpreted(self, handler, match)
+
+    return Interpreter.Interpreted(self, handler)
+
+  def resolve(self, sSelection):
+    return SImport(self.interprete(sSelection.expression, sSelection.context), sSelection)
+
+  # ===================================================================
+  
+  class Interpreted:
+    def __init__(self, interpreter, handler, match=None):
+      self.interpreter = interpreter
+      self.handler = handler
+      self.match = match
+
+  # ===================================================================
+
+  class Key:
+    def __init__(self, name, params):
+      self.name = name
+
+  # ===================================================================
+
+  class Handler:
+      
+    def __init__(self, matchers, result):
       self.matchers = [ Interpreter.Matcher(expression) for expression in matchers ]
       self.result = result.strip()
 
-    def getMatcherFor(self, expression, context):
+      arr = re.findall(r"\{\w+\}", self.result)
+      self.keys = [ x[1:-1] for x in arr]
+
+    def match(self, expression, context):
       for matcher in self.matchers:
-        if matcher.match(context):
-          return matcher
+        match = matcher.match(context)
+        if match:
+          return match
 
-    def test(self, expression, context):
-      return not not self.getMatcherFor(expression, context)
+    def getStatements(self, expression, context, match=None):
+      if not match:
+        match = self.match(expression, context)
 
-    def getStatements(self, expression, context):
-      matcher = self.getMatcherFor(expression, context)
-      if matcher:
-        statements = matcher.match(context).groupdict()
+      if match:
+        statements = match.groupdict()
         values = list(statements.values())
       else:
         statements = {}
         values = SimpleImport.expressionInContext(expression, context).split(":")
 
-      keys = self.keys()
+      keys = self.keys
       index = 0
       length = len(values)
 
       for key in keys:
-        statements[key] = values[index]
-        index = min(index + 1, length - 1)
+        if not key in statements:
+          statements[key] = values[index]
+          index = min(index + 1, length - 1)
+
       print(statements)
       return statements
-
-    def keys(self):
-      arr = re.findall(r"\{\w+\}", self.result)
-      return [ x[1:-1] for x in arr]
-
-    def resolve(self, statements):
+      
+    def getResultWithStatements(self, statements):
       result = self.result
       for key in statements:
         result = result.replace("{"+key+"}", statements[key])
       return result
 
+  # ===================================================================
 
   class Matcher:
 
@@ -102,31 +132,37 @@ class Interpreter:
       for key in keys:
         regex = regex.replace(key, "(?P<" + key[1:-1] + ">[^\s]+)")
       regex = regex.replace(" ", "\s+")
-      return regex
+      
+      return re.compile(regex + "$")
 
     def __init__(self, expression):
       self.expression = expression
       self.regex_expression = Interpreter.Matcher.generateRegex(expression)
 
     def match(self, string):
-      return re.search(re.compile(self.regex_expression + "$"), string)
+      return re.search(self.regex_expression, string)
 
-    def resolve(self, string):
+    def getMatchGroup(self, string):
       match = self.match(string)
       if match:
         return math.groupdict()
 
+
+# ===================================================================
+
 # Stands for Simple Selection
 class SSelection:
-  def __init__(self, region, context, index=0):
+  def __init__(self, expression, context, region, context_region, index=0):
+    self.expression = expression
+    self.context = context
+
     self.index = index
     self.sImports = []
     self.resolved = False
 
     # Regions
     self.region = region
-    self.context = context
-
+    self.context_region = context_region
 
   def addImport(self, sImport):
     self.sImports.append(sImport)
@@ -166,10 +202,15 @@ class SimpleImport():
       SimpleImport.interpreters[ interpreters[key]["syntax"] ] = Interpreter(interpreters[key])
 
 
+# ===================================================================
+
 class SimpleImportInterpretersCommand(sublime_plugin.TextCommand):
   def run(self, edit):
     SimpleImport.loadInterpreters()
     print("Interpreters reloaded")
+
+
+# ===================================================================
 
 class SimpleImportCommand(sublime_plugin.TextCommand):
 
@@ -188,12 +229,11 @@ class SimpleImportCommand(sublime_plugin.TextCommand):
     for selection in selections:
       region = self.view.word(selection)
       context = sublime.Region(self.view.line(selection).begin(), region.end())
-      sSelection = SSelection( region, context, selection_index )
 
-      expression = self.view.substr(region)
-      context_content = self.view.substr(context)
+      # expression, context, region, context_region, index
+      sSelection = SSelection( self.view.substr(region), self.view.substr(context), region, context, selection_index )
 
-      sImport = self.interpreter.resolve(expression, context_content, sSelection)
+      sImport = self.interpreter.resolve(sSelection)
       print(sImport.__str__())
 
       #self.view.run_command("replace", {"characters": result.__str__(), "start": result.region.begin(), "end": result.region.end()})

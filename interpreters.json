@@ -1,6 +1,22 @@
 {
   "javascript": {
     "syntax": "javascript",
+    "keys": {
+      "submodules": {
+        "array": true
+      },
+      "variable": {
+        "variable": true,
+        "remove": "!|@|*",
+        "join": "/|-|."
+      },
+      "module": {
+        "search": true,
+        "do": {
+          "lower": "/"
+        }
+      }
+    },
     "handlers" : {
       "import": {
         "default": true,
@@ -8,20 +24,11 @@
           "import {variable}",
           "import {variable} from {module}"
         ],
-        "search": "module",
-        "parse": {
-          "module": {
-            "lower": true,
-            "remove": ""
-          },
-          "variable": {
-            "remove": "-"
-          }
-        },
         "result": "import {variable} from \"{module}\""
       },
       "import_from": {
         "match": [
+          "{submodule}::{module}",
           "extends {module}\\.{submodule}"
         ],
         "result": "import { {submodule} } from \"{module}\""
