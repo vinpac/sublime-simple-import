@@ -6,9 +6,8 @@
         "array": true
       },
       "variable": {
-        "variable": true,
-        "remove": "!|@|*",
-        "join": "/|-|."
+        "remove": "!|@|\\*",
+        "join": "\\/|-|\\."
       },
       "module": {
         "search": true,
