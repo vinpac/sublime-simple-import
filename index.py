@@ -347,7 +347,6 @@ class SimpleImportCommand(sublime_plugin.TextCommand):
 
 				if importObj.searchForFiles and not self.resolveMode:
 					searchResults = self.searchFiles(importObj.searchFor, **importObj.searchFlags)
-
 					importObj.setResults(searchResults)
 					if len(searchResults) > 1:
 						self.pendingImports.append(importObj)
