@@ -29,18 +29,28 @@ class JavascriptInterpreter(Interpreter):
           Matcher("(const|let|var) {variable} = {module}")
         ],
         result="const {variable} = require(\"{module}\")"
+      ),
+      Handler(
+        name="require_from",
+        matchers=[
+          Matcher("{submodule}::{module}"),
+          Matcher("extends {module}\\.{submodule}")
+        ],
+        result="const {submodule} = require(\"{module}\").{submodule}"
       )
     ]
 
     self.keys = {
-      "submodules": Key(
-        array=True
+      "submodule": Key(
+        array=True,
+        remove=r"!|@|\*|\.",
+        join=r"\/|-"
       ),
       "module": Key(
         search=True
       ),
       "variable": Key(
-        remove=r"!|@|\*",
-        join=r"\/|-|\."
+        remove=r"!|@|\*|\.",
+        join=r"\/|-"
       )
     }

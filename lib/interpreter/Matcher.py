@@ -1,5 +1,5 @@
 import re
-from ..interpreter import Interpreter
+from .Interpreter import Interpreter
 
 class Matcher:
 
@@ -10,7 +10,7 @@ class Matcher:
       for key in keys:
         regex = regex.replace(key, "(?P<" + key[1:-1] + ">[^\s]+)")
       regex = regex.replace(" ", "\s+")
-      
+
       return re.compile(regex + "$")
 
     def __init__(self, expression):

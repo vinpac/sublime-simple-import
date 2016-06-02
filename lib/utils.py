@@ -1,3 +1,4 @@
+import re
 def expressionInContext(expression, context):
   match = re.search(r"[^\.;\s]*{0}".format(expression), context)
   if match:

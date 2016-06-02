@@ -2,7 +2,7 @@ from ..utils import expressionInContext
 import re
 
 class Handler:
-      
+
     def __init__(self, name, matchers, result):
       self.name = name
       self.matchers = matchers
@@ -39,7 +39,7 @@ class Handler:
 
       print(statements)
       return statements
-      
+
     def getResultWithStatements(self, statements):
       result = self.result
       for key in statements:

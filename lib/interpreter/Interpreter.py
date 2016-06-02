@@ -1,5 +1,5 @@
-from ..interpreter import *
-from ..SimpleImport import SImport
+from .Interpreted import Interpreted
+from ..SImport import SImport
 class Interpreter:
 
   def __init__(self, syntax, handlers, keys=[]):
