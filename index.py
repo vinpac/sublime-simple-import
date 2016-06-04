@@ -18,6 +18,7 @@ DEFAULT_SETTINGS = {
 	"from_indicator" : "::",
 	"excluded_directories" : [],
 	"extensions" : [ "js" ],
+	"remove_extensions" : [ "js" ],
 	"remove_index_from_path": True,
 	"search_indicator" : "@",
 	"search_ignorecase_indicator" : "!",
@@ -574,7 +575,7 @@ class SimpleImportCommand(sublime_plugin.TextCommand):
 		if "." in filename:
 			extension = filename.split(".")[-1]
 
-			if(extension in SimpleImportCommand.settings.get("extensions")):
+			if(extension in SimpleImportCommand.settings.get("remove_extensions")):
 				path = path[: (len(extension) + 1) * -1 ]
 
 		if "/" in path and SimpleImportCommand.settings.get("remove_index_from_path") and splited[0].strip() != "" and path.endswith("index"):
