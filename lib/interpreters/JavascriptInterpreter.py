@@ -1,56 +1,95 @@
+import re
 from ..interpreter import *
+from ..utils import joinStr
 
 class JavascriptInterpreter(Interpreter):
   def __init__(self):
-    self.syntax = "javascript"
+    keys = {
+      "variable": "[^\s]+",
+      "module": "[^\s]+",
+      "submodule": "[^\s]+"
+    }
 
+    self.syntax = "javascript"
     self.handlers = [
       Handler(
-        name="import",
-        matchers=[
-          Matcher("import {variable}"),
-          Matcher("import {variable} from {module}")
-        ],
-        result="import {variable} from \"{module}\""
+        name="import_all_from",
+        matchers=Interpreter.createMatchers([
+          "import {variable}\.\*",
+          "{variable}\.\*"
+        ], keys),
+        result="import * as {variable} from \'{module}\'",
+        force=True
       ),
       Handler(
-        name="import_from",
-        matchers=[
-          Matcher("{submodule}::{module}"),
-          Matcher("extends {module}\\.{submodule}")
-        ],
-        result="import { {submodule} } from \"{module}\""
-      ),
-      Handler(
-        name="require",
-        matchers=[
-          Matcher("require {variable}"),
-          Matcher("(const|let|var) {variable}"),
-          Matcher("(const|let|var) {variable} = {module}")
-        ],
-        result="const {variable} = require(\"{module}\")"
+        name="import_from_prefixed",
+        matchers=Interpreter.createMatchers([
+          "import {submodule}\.{module}"
+        ], keys),
+        result="import { {submodule} } from \'{module}\'",
+        force=True
       ),
       Handler(
         name="require_from",
-        matchers=[
-          Matcher("{submodule}::{module}"),
-          Matcher("extends {module}\\.{submodule}")
-        ],
-        result="const {submodule} = require(\"{module}\").{submodule}"
+        matchers=Interpreter.createMatchers([
+          "require {module}\.{submodule}",
+          "{submodule}::{module}",
+          "extends {module}\.{submodule}"
+        ], keys),
+        result="const {submodule} = require(\'{module}\').{submodule}"
+      ),
+      Handler(
+        name="import_from",
+        matchers=Interpreter.createMatchers([
+          "{submodule}::{module}",
+          "{module}\.{submodule}",
+          "extends {module}\.{submodule}"
+        ], keys),
+        result="import { {submodule} } from \'{module}\'"
+      ),
+      Handler(
+        name="import",
+        matchers=Interpreter.createMatchers([
+          "import {variable}",
+          "(?P<module>[^\s\.]+)(\.[^\s]+){2,}",
+          "import {variable} from {module}"
+        ], keys),
+        result="import {variable} from \'{module}\'"
+      ),
+      Handler(
+        name="require",
+        matchers=Interpreter.createMatchers([
+          "require {variable}",
+          "(const|let|var) {variable}",
+          "(const|let|var) {variable} = {module}"
+        ], keys),
+        result="const {variable} = require(\'{module}\')"
+      ),
+      Handler(
+        name="require_plain",
+        matchers=Interpreter.createMatchers([
+          "req {variable}"
+        ], keys),
+        result="require(\'{module}\')"
       )
     ]
 
-    self.keys = {
-      "submodule": Key(
-        array=True,
-        remove=r"!|@|\*|\.",
-        join=r"\/|-"
-      ),
-      "module": Key(
-        search=True
-      ),
-      "variable": Key(
-        remove=r"!|@|\*|\.",
-        join=r"\/|-"
-      )
-    }
+    self.setDefaultHandler("import")
+
+  def parseSubmodules(self, value):
+    values = value.split(",")
+    v = []
+
+    for name in values:
+      v.append( self.parseVariableName(name.strip()) )
+
+    return v.join(', ')
+
+  def parseSubmoduleKey(self, value):
+    return self.parseVariableKey(value)
+
+  def parseModuleKey(self, value):
+    return value.lower()
+
+  def parseVariableKey(self, value):
+    return joinStr(re.sub(r"!|@|\*", "", value), r"\/|-|\.")

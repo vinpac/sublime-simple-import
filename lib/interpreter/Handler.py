@@ -3,17 +3,18 @@ import re
 
 class Handler:
 
-    def __init__(self, name, matchers, result):
+    def __init__(self, name, matchers, result, force=False):
       self.name = name
       self.matchers = matchers
       self.result = result
+      self.force=force
 
       arr = re.findall(r"\{\w+\}", self.result)
       self.keys = [ x[1:-1] for x in arr]
 
     def match(self, expression, context):
       for matcher in self.matchers:
-        match = matcher.match(context)
+        match = re.search(matcher, context)
         if match:
           return match
 

@@ -13,12 +13,11 @@ class Matcher:
 
       return re.compile(regex + "$")
 
-    def __init__(self, expression):
-      self.expression = expression
-      self.regex_expression = Matcher.generateRegex(expression)
+    def __init__(self, regex):
+      self.regex = regex
 
     def match(self, string):
-      return re.search(self.regex_expression, string)
+      return re.search(self.regex, string)
 
     def getMatchGroup(self, string):
       match = self.match(string)

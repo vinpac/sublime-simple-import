@@ -1,47 +1,57 @@
+import re
 from .Interpreted import Interpreted
 from ..SImport import SImport
+from ..utils import joinStr, ucfirst
 class Interpreter:
 
-  def __init__(self, syntax, handlers, keys=[]):
-    self.syntax = syntax
-    self.createHandlers(handlers)
-    self.createKeys(keys)
+  @staticmethod
+  def createMatchers(arr, matchers):
+    result = []
+    for matcher in arr:
+      _m = matcher
+      for key in matchers:
+        _m = _m.replace("{"+ key +"}", "(?P<"+ key +">"+ matchers[key] +")")
+      result.append(re.compile(_m))
+    return result
 
-  def createKeys(self, keys):
-    self.keys = {}
-    for name in keys:
-      self.keys[name] = Key(name, keys[name])
+  def __init__(self, syntax, handlers, keys=[], defaultHandler=None):
+    self.syntax = syntax
+    self.handlers = handlers
+    self.keys = keys
+    self.defaultHandler = defaultHandler
+    self.defaultHandlerName = defaultHandler.name if defaultHandler else None
 
   def parseStatements(self, statements):
     for key in statements:
-      if key in self.keys:
-        statements[key] = self.keys[key].parse(statements[key])
+      fn = getattr(self, joinStr("parse" + ucfirst(key) + "Key"),  None)
+      if callable(fn):
+        statements[key] = fn(statements[key])
     return statements
 
-  def createHandlers(self, handlers):
-    self.handlers = []
-    for key in handlers:
-      obj = handlers[key]
-      try:
-        handler = Handler(obj["match"], obj["result"])
-      except KeyError:
-        print("Error creating Handler from dict")
-
-      self.handlers.append( handler )
-
-      if( "default" in handlers[key] and handlers[key]["default"] == True):
-        self.defaultHandler = self.handlers[-1]
-
-    if not self.defaultHandler and len(handlers):
-      self.defaultHandler = self.handlers[1]
-
   def interprete(self, expression, context):
+    matched = None
     for handler in self.handlers:
       match = handler.match(expression, context)
-      if match:
+      if match and handler.force:
         return Interpreted(self, handler, match)
+      elif match and (not matched or handler.name == self.defaultHandlerName):
+        matched = Interpreted(self, handler, match)
 
-    return Interpreted(self, handler)
+    if not matched:
+      return Interpreted(self, self.getDefaultHandler(), None)
+
+    return matched
+
+  def getDefaultHandler(self):
+    print(self.defaultHandler)
+    return self.defaultHandler if self.defaultHandler else self.handlers[0]
+
+  def setDefaultHandler(self, handlerName):
+    for handler in self.handlers:
+      if handler.name == handlerName:
+        self.defaultHandler = handler
+        self.defaultHandlerName = handler.name
+        return
 
   def resolve(self, sSelection):
     return SImport(self.interprete(sSelection.expression, sSelection.context), sSelection)
