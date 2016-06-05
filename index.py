@@ -127,9 +127,10 @@ class Importation:
 
 			if word[-1] == "$":
 				self.alternative = True
+				word.pop(-1)
 
-			if not word[1] or word[1] == "$":
-				word[1] = word[0]
+			if len(word) <= 1:
+				word.append(word[0])
 
 
 
@@ -249,7 +250,7 @@ class Importation:
 		if(self.onlyModel and not forceFull):
 			return "\"{0}\";".format(self.module)
 
-		return "import {0} from \"{1}\";".format(name, self.module);
+		return "import {0} from \'{1}\';".format(name, self.module);
 
 	def getRequire(self, forceFull=False):
 		if(self.context):
@@ -264,7 +265,7 @@ class Importation:
 		if(self.onlyModel and not forceFull):
 			return "require(\"{0}\");".format(self.module)
 
-		return "const {0} = require(\"{1}\"){2}".format(self.name, self.module, end)
+		return "const {0} = require(\'{1}\'){2}".format(self.name, self.module, end)
 
 	def __str__(self, forceFull=False):
 		es6_by_default = SimpleImportCommand.settings.get("es6_by_default")
