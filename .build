@@ -8,12 +8,9 @@
 		"lib/interpreters/__init__.py",
 		"lib/interpreters/JavascriptInterpreter.py",
 		"lib/interpreter/__init__.py",
-		"lib/interpreter/Matcher.py",
-		"lib/interpreter/Key.py",
 		"lib/interpreter/Interpreter.py",
 		"lib/interpreter/Interpreted.py",
 		"lib/interpreter/Handler.py",
-		"lib/dev/module_loader.py",
 		"lib/SImport.py",
 		"SimpleImport.py",
 		"ReloadPlugin.py"

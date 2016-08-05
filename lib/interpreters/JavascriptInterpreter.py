@@ -11,6 +11,15 @@ class JavascriptInterpreter(Interpreter):
     }
 
     self.syntax = "javascript"
+    self.extensions = ["js", "jsx"]
+    self.modules_folder = 'node_modules'
+
+    self.exports = [
+      "export (const|let|var|function|class) {value}",
+      "export {\s*{values}\s*}",
+      "exports\.{value} ="
+    ]
+
     self.handlers = [
       Handler(
         name="import_all_from",

@@ -28,10 +28,10 @@ class Interpreter:
         statements[key] = fn(statements[key])
     return statements
 
-  def interprete(self, expression, context):
+  def interprete(self, sSelection):
     matched = None
     for handler in self.handlers:
-      match = handler.match(expression, context)
+      match = handler.match(sSelection)
       if match and handler.force:
         return Interpreted(self, handler, match)
       elif match and (not matched or handler.name == self.defaultHandlerName):
@@ -54,4 +54,4 @@ class Interpreter:
         return
 
   def resolve(self, sSelection):
-    return SImport(self.interprete(sSelection.expression, sSelection.context), sSelection)
+    return SImport(self.interprete(sSelection), sSelection)
