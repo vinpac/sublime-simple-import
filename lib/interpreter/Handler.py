@@ -37,7 +37,6 @@ class Handler:
         statements[key] = values[index]
         index = min(index + 1, length - 1)
 
-    print(statements)
     return statements
 
   def getResultWithStatements(self, statements):

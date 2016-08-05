@@ -1,6 +1,5 @@
 import re
 from .Interpreted import Interpreted
-from ..SImport import SImport
 from ..utils import joinStr, ucfirst
 class Interpreter:
 
@@ -14,12 +13,15 @@ class Interpreter:
       result.append(re.compile(_m))
     return result
 
-  def __init__(self, syntax, handlers, keys=[], defaultHandler=None):
+  def __init__(self, syntax, handlers, modules_folder=None, extensions=[], extra_extensions=[], keys=[], defaultHandler=None):
     self.syntax = syntax
     self.handlers = handlers
     self.keys = keys
+    self.extensions = extensions
+    self.extra_extensions = extra_extensions
     self.defaultHandler = defaultHandler
     self.defaultHandlerName = defaultHandler.name if defaultHandler else None
+    self.modules_folder = modules_folder
 
   def parseStatements(self, statements):
     for key in statements:
@@ -33,17 +35,16 @@ class Interpreter:
     for handler in self.handlers:
       match = handler.match(sSelection)
       if match and handler.force:
-        return Interpreted(self, handler, match)
+        return Interpreted(self, handler, sSelection,match)
       elif match and (not matched or handler.name == self.defaultHandlerName):
-        matched = Interpreted(self, handler, match)
+        matched = Interpreted(self, handler, sSelection,match)
 
     if not matched:
-      return Interpreted(self, self.getDefaultHandler(), None)
+      return Interpreted(self, self.getDefaultHandler(), sSelection, None)
 
     return matched
 
   def getDefaultHandler(self):
-    print(self.defaultHandler)
     return self.defaultHandler if self.defaultHandler else self.handlers[0]
 
   def setDefaultHandler(self, handlerName):
@@ -54,4 +55,4 @@ class Interpreter:
         return
 
   def resolve(self, sSelection):
-    return SImport(self.interprete(sSelection), sSelection)
+    return self.interprete(sSelection)
