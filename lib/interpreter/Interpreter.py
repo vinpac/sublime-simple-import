@@ -3,16 +3,6 @@ from .Interpreted import Interpreted
 from ..utils import joinStr, ucfirst
 class Interpreter:
 
-  @staticmethod
-  def createMatchers(arr, matchers):
-    result = []
-    for matcher in arr:
-      _m = matcher
-      for key in matchers:
-        _m = _m.replace("{"+ key +"}", "(?P<"+ key +">"+ matchers[key] +")")
-      result.append(re.compile(_m))
-    return result
-
   def __init__(self, syntax, handlers, modules_folder=None, extensions=[], extra_extensions=[], keys=[], defaultHandler=None):
     self.syntax = syntax
     self.handlers = handlers
@@ -23,12 +13,19 @@ class Interpreter:
     self.defaultHandlerName = defaultHandler.name if defaultHandler else None
     self.modules_folder = modules_folder
 
-  def parseStatements(self, statements):
+  def onCreateStatements(self, handler, sSelection, statements=None):
+    obj = {}
+
+    if not statements:
+      statements = handler.getStatements(sSelection)
+
     for key in statements:
       fn = getattr(self, joinStr("parse" + ucfirst(key) + "Key"),  None)
       if callable(fn):
-        statements[key] = fn(statements[key])
-    return statements
+        obj[key] = fn(statements[key])
+      else:
+        obj[key] = statements[key]
+    return obj
 
   def interprete(self, sSelection):
     matched = None
@@ -54,5 +51,5 @@ class Interpreter:
         self.defaultHandlerName = handler.name
         return
 
-  def resolve(self, sSelection):
-    return self.interprete(sSelection)
+  def setStatementsByOption(self, interpreted, option_obj):
+    interpreted.statements['module'] = option_obj['value']

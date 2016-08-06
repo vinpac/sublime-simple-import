@@ -12,6 +12,9 @@ class SimpleImport():
 
   @staticmethod
   def getInstalledModules(interpreter, project_path):
+    if not interpreter.modules_folder:
+      return []
+
     modules_path = path.join(project_path, interpreter.modules_folder)
     modules_path_len = len(modules_path)
     modules = []
@@ -23,8 +26,20 @@ class SimpleImport():
     return modules
 
   @staticmethod
-  def isInstalledModule(module, interpreter, project_path):
-    return module in SimpleImport.getInstalledModules(interpreter, project_path)
+  def normalizeValue(value):
+    return re.sub(r"-|\.", "", value).lower()
+
+  @staticmethod
+  def findRelatedInstalledModules(value, interpreter, project_path):
+    installed_modules = SimpleImport.getInstalledModules(interpreter, project_path)
+    value = SimpleImport.normalizeValue(value)
+    arr = [ module for module in installed_modules if SimpleImport.normalizeValue(module).startswith(value)]
+    arr.sort()
+    return arr
+
+  @staticmethod
+  def isInstalledModule(value, interpreter, project_path):
+    return value in SimpleImport.getInstalledModules(interpreter, project_path)
 
   @staticmethod
   def loadInterpreters():
@@ -32,6 +47,43 @@ class SimpleImport():
     for name in  InterpretersNames:
       _object = globals()[name]()
       SimpleImport.interpreters[_object.syntax] = _object
+
+  @staticmethod
+  def findByValue(value, interpreter, project_path):
+    files = []
+    extra_files = []
+    containing_files = []
+    project_path_len = len(project_path)
+    regex = "({0}|{0}\/index){1}$".format(value, "(" + "|".join(interpreter.extensions) + ")")
+
+    for dirpath, dirnames, filenames in walk(project_path, topdown=True):
+      relative_path = dirpath[project_path_len:]
+      dirnames[:] = [dirname for dirname in dirnames if path.join(relative_path, dirname) not in ["node_modules", ".git"]]
+
+      for filename in filenames:
+
+        # Find files with name equal the value
+        if re.search(regex, path.join(relative_path, filename), re.IGNORECASE):
+          files.append(path.join(relative_path, filename))
+
+        # Find files that export the value
+        if True in [ filename.endswith(extension) for extension in interpreter.extensions ]:
+          matches = re.findall(r"(export\s+(const|let|var|function|class)\s+(?P<value>[^\s]+))", open(path.join(dirpath, filename)).read())
+          for match in matches:
+            if match[2] == value:
+              containing_files.append(path.join(relative_path, filename))
+          pass
+
+        # Find files with name equal the value and extra extension
+        if interpreter.extra_extensions and re.search(r"{0}({1})".format(value, "|".join(interpreter.extra_extensions)), filename, re.IGNORECASE):
+          extra_files.append(path.join(relative_path, filename))
+
+
+    response = {}
+    response["files"] = files
+    response["containing_files"] = containing_files
+    response["extra_files"] = extra_files
+    return response
 
   @staticmethod
   def findValueInFiles(project_path, interpreter, value):
@@ -123,38 +175,13 @@ class SSelection:
 
 # ===================================================================
 
-class SimpleImportInterpretersCommand(sublime_plugin.TextCommand):
-  def run(self, edit):
-    SimpleImport.loadInterpreters()
-    print("Interpreters reloaded")
-
-# ===================================================================
-class SimpleImportEventListener(sublime_plugin.EventListener):
-  def on_post_save(self, view):
-    syntax = path.basename(view.settings().get('syntax')).lower()
-    self.interpreter = getInterpreter(syntax)
-
-    if not self.interpreter:
-      print("Simple import does not support '.{0}' syntax yet".format(syntax))
-      return
-
-
-    # TODO: find every export in the current file and store it in json file
-    # with filepath as the key
-    #
-    # matches = view.find_all(r"(export\s+(const|let|var|function|class|default)\s+[^\s]+)")
-    # for region in matches:
-    #   print(view.substr(region).split(" ")[-1])
-
-
-
-# ===================================================================
-
 class SimpleImportCommand(sublime_plugin.TextCommand):
 
   def run(self, edit):
 
     syntax = path.basename(self.view.settings().get('syntax')).lower()
+    self.project_path = self.view.window().folders()[-1]
+    self.rel_view_path = path.dirname(self.view.file_name())[len(self.project_path):]
     self.interpreter = getInterpreter(syntax)
 
     if not self.interpreter:
@@ -164,6 +191,11 @@ class SimpleImportCommand(sublime_plugin.TextCommand):
     selections = self.view.sel()
     selection_index = 0
 
+    #regex = self.interpreter.find_imports_regex
+    #regions = self.view.find_all(regex)
+
+    #for region in regions:
+    #  print(self.interpreter.parseStringToImport(self.view.substr(region)))
 
     for selection in selections:
       region = self.view.word(selection)
@@ -172,17 +204,53 @@ class SimpleImportCommand(sublime_plugin.TextCommand):
       # expression, context, region, context_region, index
       sSelection = SSelection( self.view.substr(region), self.view.substr(context), region, context, selection_index )
 
-      sImport = self.interpreter.resolve(sSelection)
-      #print(sImport.__str__())
-      #print(sSelection.context)
-      print(SimpleImport.findValueInFiles(self.view.window().folders()[1], self.interpreter, sImport.statements['variable']))
-      print(SimpleImport.isInstalledModule(sImport.statements['module'], self.interpreter, self.view.window().folders()[1]))
+      interpreted = self.interpreter.interprete(sSelection)
+      self.interpreted = interpreted
+
+      file_query_value = self.interpreter.getFileQuery(interpreted)
+      module_query_value = self.interpreter.getModuleQuery(interpreted)
+
+      interpreted.options = SimpleImport.findByValue(file_query_value, self.interpreter, self.project_path)
+      interpreted.options["modules"] = SimpleImport.findRelatedInstalledModules(module_query_value, self.interpreter, self.project_path)
+
+      options_arr = interpreted.getOptionsArr()
+
+
+      if len(options_arr) == 1:
+        self.handleOptionClick(0)
+      elif len(options_arr) > 1:
+        self.view.show_popup_menu(options_arr, self.handleOptionClick)
 
       #self.view.run_command("replace", {"characters": result.__str__(), "start": result.region.begin(), "end": result.region.end()})
+      #
+
+  def parsePath(self, path):
+    if path[:2] == "./" or path[:3] == "../":
+      return path
+    else:
+      return "./" + path
+
+  def handleOptionClick(self, index):
+
+    if index != -1:
+      option_obj = self.interpreted.getOptionObjectByIndex(index)
+
+      if option_obj["key"] != "modules":
+        option_obj["value"] = self.parsePath(path.normpath(path.relpath("/" + option_obj["value"], self.rel_view_path)))
+      self.interpreter.setStatementsByOption(self.interpreted, option_obj)
+
+    print(self.interpreted)
 
 
   def handle(self):
     print("handle")
+
+  def parseOptionsToArray(self, options):
+    arr = []
+    key_str = { "files": "Import", "modules": "Import Module", "containing_files": "Import From", "extra_files": "Import"}
+    for key in options:
+      arr = arr + [ "{key}: {value}".format(key=key_str[key], value=option) for option in options[key] ]
+    return arr
 
 
 class ReplaceCommand(sublime_plugin.TextCommand):

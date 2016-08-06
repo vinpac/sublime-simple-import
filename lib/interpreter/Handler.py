@@ -2,14 +2,20 @@ import re
 
 class Handler:
 
-  def __init__(self, name, matchers, result, force=False):
-    self.name = name
-    self.matchers = matchers
-    self.result = result
-    self.force = force
+  @staticmethod
+  def createMatchers(matchers, keys):
+    result = []
+    for matcher in matchers:
+      _m = matcher
+      for key in keys:
+        _m = _m.replace("{"+ key +"}", "(?P<"+ key +">"+ keys[key] +")")
+      result.append(re.compile(_m))
+    return result
 
-    arr = re.findall(r"\{\w+\}", self.result)
-    self.keys = [ x[1:-1] for x in arr]
+  def __init__(self, name, matchers, keys, force=False):
+    self.name = name
+    self.matchers = self.createMatchers(matchers, keys)
+    self.force = force
 
   def match(self, sSelection):
     for matcher in self.matchers:
@@ -27,20 +33,7 @@ class Handler:
     else:
       statements = {}
       values = sSelection.expression_in_context.split(":")
-
-    keys = self.keys
-    index = 0
-    length = len(values)
-
-    for key in keys:
-      if not key in statements:
-        statements[key] = values[index]
-        index = min(index + 1, length - 1)
+      values_len = len(values)
+      index = 0
 
     return statements
-
-  def getResultWithStatements(self, statements):
-    result = self.result
-    for key in statements:
-      result = result.replace("{"+key+"}", statements[key])
-    return result

@@ -12,11 +12,11 @@ class Interpreted:
     self.match = match
     self.sSelection = sSelection
 
-    self.statements = handler.getStatements(sSelection, match)
+    self.statements = interpreter.onCreateStatements(handler, sSelection)
     self.options = {}
 
   def __str__(self):
-    return self.handler.getResultWithStatements(interpreter.parseStatements(self.statements))
+    return self.interpreter.parseStatementsToString(self.statements, import_type=self.handler.name)
 
   def getOptionsArr(self):
     arr = []
@@ -27,9 +27,7 @@ class Interpreted:
   def getOptionObjectByIndex(self, index):
     i = 0
     for key in self.options:
-      i += len(self.options[key])
-      if index < i:
-        return { "key": key, "value": self.options[key][index - (i - 1)]  }
-
-  def setStatementsByOption(self, option_obj):
-    print(self.statements)
+      length = len(self.options[key])
+      if index < length:
+        return { "key": key, "value": self.options[key][index]  }
+      index = index - length
