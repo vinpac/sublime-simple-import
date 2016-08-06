@@ -139,10 +139,16 @@ def getInterpreter(syntax):
 
 # Stands for Simple Selection
 class SSelection:
+  @staticmethod
+  def getExpressionInContext(expression, context):
+    match = re.search(r"[^\.;\s]*{0}".format(expression), context)
+    if match:
+      return match.group(0)
+    return expression
+
   def __init__(self, expression, context, region, context_region, index=0):
-    self.expression = expression
+    self.expression = self.getExpressionInContext(expression, context)
     self.context = context
-    self.expression_in_context = self.getExpressionInContext()
 
     self.index = index
     self.sImports = []
@@ -151,12 +157,6 @@ class SSelection:
     # Regions
     self.region = region
     self.context_region = context_region
-
-  def getExpressionInContext(self):
-    match = re.search(r"[^\.;\s]*{0}".format(self.expression), self.context)
-    if match:
-      return match.group(0)
-    return expression
 
   def addImport(self, sImport):
     self.sImports.append(sImport)
@@ -190,19 +190,25 @@ class SimpleImportCommand(sublime_plugin.TextCommand):
 
     selections = self.view.sel()
     selection_index = 0
-
-    #regex = self.interpreter.find_imports_regex
-    #regions = self.view.find_all(regex)
-
-    #for region in regions:
-    #  print(self.interpreter.parseStringToImport(self.view.substr(region)))
+    self.all_imports = self.findAllImports()
+    self.final_imports = []
 
     for selection in selections:
-      region = self.view.word(selection)
-      context = sublime.Region(self.view.line(selection).begin(), region.end())
+      if selection.end() == selection.begin():
+        region = self.view.word(selection)
+        context_region = sublime.Region(self.view.line(selection).begin(), region.end())
+      else:
+        region = selection
+        context_region = selection
 
       # expression, context, region, context_region, index
-      sSelection = SSelection( self.view.substr(region), self.view.substr(context), region, context, selection_index )
+      sSelection = SSelection(
+        self.view.substr(region),
+        self.view.substr(context_region),
+        region,
+        context_region,
+        selection_index
+      )
 
       interpreted = self.interpreter.interprete(sSelection)
       self.interpreted = interpreted
@@ -231,31 +237,58 @@ class SimpleImportCommand(sublime_plugin.TextCommand):
       return "./" + path
 
   def handleOptionClick(self, index):
-
     if index != -1:
       option_obj = self.interpreted.getOptionObjectByIndex(index)
 
       if option_obj["key"] != "modules":
         option_obj["value"] = self.parsePath(path.normpath(path.relpath("/" + option_obj["value"], self.rel_view_path)))
+
       self.interpreter.setStatementsByOption(self.interpreted, option_obj)
+      statements = self.interpreted.statements
 
-    print(self.interpreted)
+      regex = self.interpreter.getComparatorRegex(statements)
+      found = False
+      for _import in self.all_imports:
+        _import_statements = _import[0]
 
+        if self.interpreter.compareStatements(_import_statements, regex=regex):
+          found = True
+          for key in statements:
+            if not key in _import_statements:
+              _import_statements[key] = statements[key]
+              pass
 
-  def handle(self):
-    print("handle")
+            if type(_import_statements[key]) is list:
+              _import_statements[key] = _import_statements[key] + list(set(statements[key]) - set(_import_statements[key]))
+            else:
+              _import_statements[key] = statements[key]
+          self.final_imports.append(_import)
+          break
 
-  def parseOptionsToArray(self, options):
-    arr = []
-    key_str = { "files": "Import", "modules": "Import Module", "containing_files": "Import From", "extra_files": "Import"}
-    for key in options:
-      arr = arr + [ "{key}: {value}".format(key=key_str[key], value=option) for option in options[key] ]
-    return arr
+      if not found:
+        print("NOT FOUNd")
+        end = self.all_imports[-1][1].end() if len(self.all_imports) else 0
+        self.final_imports.append((statements, sublime.Region(end, end)))
+
+      self.writeFinalImports(insert=not found)
+
+  def writeFinalImports(self, insert=False):
+    for _import in self.final_imports:
+      self.view.run_command("replace", {
+        "characters": self.interpreter.parseStatementsToString(_import[0], insert=insert),
+        "start": _import[1].begin(),
+        "end": _import[1].end()
+      })
+
+  def findAllImports(self):
+    regions = self.view.find_all(self.interpreter.find_imports_regex)
+    return [ (self.interpreter.parseStringToImport(self.view.substr(region)), region) for region in regions ]
+
 
 
 class ReplaceCommand(sublime_plugin.TextCommand):
     def run(self, edit, characters, start=0, end=False):
-      if(end == False):
+      if(end == False and end != 0):
         end = self.view.size()
       self.view.replace(edit,sublime.Region(start, end), characters)
 

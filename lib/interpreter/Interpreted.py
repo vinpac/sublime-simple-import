@@ -1,22 +1,22 @@
 class Interpreted:
-  key_str= {
+  key_str = {
     "files": "Import",
     "modules": "Import Module",
     "containing_files": "Import From",
     "extra_files": "Import"
-    }
+  }
 
-  def __init__(self, interpreter, handler, sSelection, match=None):
+  def __init__(self, interpreter, statements, import_type, sSelection):
     self.interpreter = interpreter
-    self.handler = handler
-    self.match = match
+    self.import_type = import_type
     self.sSelection = sSelection
-
-    self.statements = interpreter.onCreateStatements(handler, sSelection)
+    self.statements = statements
     self.options = {}
 
+    interpreter.onInterprete(self)
+
   def __str__(self):
-    return self.interpreter.parseStatementsToString(self.statements, import_type=self.handler.name)
+    return self.interpreter.parseStatementsToString(self.statements, import_type=self.import_type)
 
   def getOptionsArr(self):
     arr = []

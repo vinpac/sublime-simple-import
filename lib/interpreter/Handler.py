@@ -23,17 +23,7 @@ class Handler:
       if match:
         return match
 
-  def getStatements(self, sSelection, match=None):
-    if not match:
-      match = self.match(sSelection)
+  def getStatements(self, sSelection):
+    match = self.match(sSelection)
 
-    if match:
-      statements = match.groupdict()
-      values = list(statements.values())
-    else:
-      statements = {}
-      values = sSelection.expression_in_context.split(":")
-      values_len = len(values)
-      index = 0
-
-    return statements
+    return match.groupdict() if match else {}

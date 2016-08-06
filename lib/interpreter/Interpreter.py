@@ -13,33 +13,28 @@ class Interpreter:
     self.defaultHandlerName = defaultHandler.name if defaultHandler else None
     self.modules_folder = modules_folder
 
-  def onCreateStatements(self, handler, sSelection, statements=None):
-    obj = {}
-
-    if not statements:
-      statements = handler.getStatements(sSelection)
-
-    for key in statements:
+  def onInterprete(self, interpreted):
+    for key in interpreted.statements:
       fn = getattr(self, joinStr("parse" + ucfirst(key) + "Key"),  None)
       if callable(fn):
-        obj[key] = fn(statements[key])
-      else:
-        obj[key] = statements[key]
-    return obj
+        interpreted.statements[key] = fn(interpreted.statements[key])
 
   def interprete(self, sSelection):
-    matched = None
+    matched_handler = None
     for handler in self.handlers:
       match = handler.match(sSelection)
       if match and handler.force:
-        return Interpreted(self, handler, sSelection,match)
-      elif match and (not matched or handler.name == self.defaultHandlerName):
-        matched = Interpreted(self, handler, sSelection,match)
+        matched_handler = handler
+        break
+      elif match and (not matched_handler or handler.name == self.defaultHandlerName):
+        matched_handler = handler
 
-    if not matched:
-      return Interpreted(self, self.getDefaultHandler(), sSelection, None)
+    if not matched_handler:
+      matched_handler = self.getDefaultHandler()
 
-    return matched
+    statements = handler.getStatements(sSelection)
+
+    return Interpreted(self, matched_handler.getStatements(sSelection), matched_handler.name, sSelection)
 
   def getDefaultHandler(self):
     return self.defaultHandler if self.defaultHandler else self.handlers[0]

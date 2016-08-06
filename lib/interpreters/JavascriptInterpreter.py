@@ -4,7 +4,7 @@ from ..utils import joinStr
 
 class JavascriptInterpreter(Interpreter):
 
-  find_imports_regex = r"(import[\s]+([^(;)]+)[\s]+from[\s]+[\"\']([^\s]+)[\"\'])"
+  find_imports_regex = r"(import[\s\n]+((?:(?!from)[\s\S])*)[\s\n]+from[\s]+[\"\']([^\"\']+)[\"\'])"
 
   def __init__(self):
     keys = {
@@ -14,6 +14,7 @@ class JavascriptInterpreter(Interpreter):
     }
 
     self.syntax = "javascript"
+    self.remove_extensions = [".js", ".jsx"]
     self.extensions = [".js", ".jsx"]
     self.extra_extensions = [ ".jpg", ".svg", ".json", ".gif", ".css", ".scss", ".less" ]
     self.modules_folder = 'node_modules'
@@ -88,15 +89,18 @@ class JavascriptInterpreter(Interpreter):
 
     self.setDefaultHandler("import")
 
+  def parseModuleKey(self, value):
+    for ext in self.remove_extensions:
+      if value.endswith(ext):
+        return value[0:-len(ext)]
+    return value
+
   def parseSubmodulesKey(self, value):
     submodules = value.split(',')
     return [ submodule.strip() for submodule in submodules ]
 
   def parseVariableKey(self, value):
     return joinStr(re.sub(r"!|@|\*", "", value), r"\/|-|\.")
-
-  def parseSubmodulesStr(self, submodules):
-    return ", ".join(submodules)
 
   def getFileQuery(self, interpreted):
     return interpreted.statements["module"]
@@ -110,27 +114,24 @@ class JavascriptInterpreter(Interpreter):
       interpreted.statements['submodules'] = self.parseSubmodulesKey(interpreted.statements['variable'])
       del interpreted.statements['variable']
 
-    interpreted.statements['module'] = option_obj['value']
+    interpreted.statements['module'] = self.parseModuleKey(option_obj['value'])
 
-  def onCreateStatements(self, handler, sSelection):
-    statements = handler.getStatements(sSelection)
+  def onInterprete(self, interpreted):
 
-    if len(statements) == 0:
+    if len(interpreted.statements.keys()) == 0:
       index = 0
       keys = ["module", "variable"]
-      values = sSelection.expression_in_context.split(":")
+      values = interpreted.sSelection.expression.split(":")
       length = len(values)
 
       for key in keys:
-        statements[key] = values[index]
+        interpreted.statements[key] = values[index]
         index += min(index + 1, length - 1)
     else:
-      if "module" not in statements:
-        statements["module"] = statements["variable"]
-      elif "variable" not in statements:
-        statements["variable"] = statements["module"]
+      if "module" not in interpreted.statements:
+        interpreted.statements["module"] = interpreted.statements["variable"]
 
-    return super().onCreateStatements(handler, sSelection, statements=statements)
+    return super().onInterprete(interpreted)
 
   def parseStringToImport(self, import_str):
     splited = re.search(self.find_imports_regex, import_str).groups()
@@ -154,7 +155,7 @@ class JavascriptInterpreter(Interpreter):
 
     return import_dict
 
-  def parseStatementsToString(self, statements, import_type=None):
+  def parseStatementsToString(self, statements, import_type=None, insert=False):
     import_str = 'import '
 
     if import_type:
@@ -171,4 +172,19 @@ class JavascriptInterpreter(Interpreter):
 
     import_str += " from \'{0}\'".format(statements['module'])
 
+    if insert:
+      import_str = "\n" + import_str
+
     return import_str
+
+  def getComparatorRegex(self, statements):
+    return r"{0}({1})?$".format(statements['module'], "|".join(self.remove_extensions))
+
+  def compareStatements(self, first_statements, second_statements=None, regex=None):
+    if not regex:
+      if not second_statements:
+        return first_statements == second_statements
+      regex = self.getComparatorRegex(second_statements)
+
+    print(regex, first_statements['module'])
+    return re.search(regex, first_statements['module'])
