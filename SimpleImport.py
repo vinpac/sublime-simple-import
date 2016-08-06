@@ -262,20 +262,24 @@ class SimpleImportCommand(sublime_plugin.TextCommand):
               _import_statements[key] = _import_statements[key] + list(set(statements[key]) - set(_import_statements[key]))
             else:
               _import_statements[key] = statements[key]
-          self.final_imports.append(_import)
+          self.final_imports.append((_import[0], _import[1], "replace"))
           break
 
       if not found:
-        print("NOT FOUNd")
-        end = self.all_imports[-1][1].end() if len(self.all_imports) else 0
-        self.final_imports.append((statements, sublime.Region(end, end)))
+        if len(self.all_imports):
+          insert_type = "insert_after"
+          end = self.all_imports[-1][1].end()
+        else:
+          insert_type = "insert"
+          end = 0
+        self.final_imports.append((statements, sublime.Region(end, end), insert_type))
 
-      self.writeFinalImports(insert=not found)
+      self.writeFinalImports()
 
-  def writeFinalImports(self, insert=False):
+  def writeFinalImports(self):
     for _import in self.final_imports:
       self.view.run_command("replace", {
-        "characters": self.interpreter.parseStatementsToString(_import[0], insert=insert),
+        "characters": self.interpreter.parseStatementsToString(_import[0], insert_type=_import[2]),
         "start": _import[1].begin(),
         "end": _import[1].end()
       })

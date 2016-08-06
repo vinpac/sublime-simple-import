@@ -47,7 +47,7 @@ class JavascriptInterpreter(Interpreter):
         name="require_from",
         matchers=[
           "require {module}\.{submodules}",
-          "{submodules}::{module}",
+          "{module}::{submodules}",
           "extends {module}\.{submodules}"
         ],
         keys=keys
@@ -55,7 +55,7 @@ class JavascriptInterpreter(Interpreter):
       Handler(
         name="import_from",
         matchers=[
-          "{submodules}::{module}"
+          "{module}::{submodules}"
         ],
         keys=keys
       ),
@@ -155,7 +155,7 @@ class JavascriptInterpreter(Interpreter):
 
     return import_dict
 
-  def parseStatementsToString(self, statements, import_type=None, insert=False):
+  def parseStatementsToString(self, statements, import_type=None, insert_type="insert"):
     import_str = 'import '
 
     if import_type:
@@ -172,8 +172,12 @@ class JavascriptInterpreter(Interpreter):
 
     import_str += " from \'{0}\'".format(statements['module'])
 
-    if insert:
+    print(insert_type)
+    if insert_type == "insert_after":
       import_str = "\n" + import_str
+    elif insert_type == "insert":
+      import_str = import_str + "\n"
+
 
     return import_str
 
