@@ -1,71 +1,63 @@
 import re
-from ..interpreter import *
 from ..utils import joinStr
 
 class JavascriptInterpreter(Interpreter):
 
-  find_imports_regex = r"(import[\s\n]+((?:(?!from)[\s\S])*)[\s\n]+from[\s]+[\"\']([^\"\']+)[\"\'])"
-
   def __init__(self):
+
+    self.find_imports_regex = r"(import[\s\n]+((?:(?!from)[\s\S])*)[\s\n]+from[\s]+[\"\']([^\"\']+)[\"\'])"
+    self.find_exports_regex = r"(export\s+(const|let|var|function|class)\s+(?P<value>[^\s]+))"
+
     keys = {
       "variable": "[^\s]+",
       "module": "[^\s]+",
-      "submodules": "[^\s]+"
+      "submodule": "[^\s]+",
+      "submodules": "((?:(?!from)[\s\S])*)"
     }
 
     self.syntax = "javascript"
-    self.remove_extensions = [".js", ".jsx"]
-    self.extensions = [".js", ".jsx"]
-    self.extra_extensions = [ ".jpg", ".svg", ".json", ".gif", ".css", ".scss", ".less" ]
-    self.modules_folder = 'node_modules'
-
-    self.exports = [
-      "export (const|let|var|function|class) {value}",
-      "export {\s*{values}\s*}",
-      "exports\.{value} ="
-    ]
+    self.settings = {
+      "extensions": [".js", ".jsx"],
+      "remove_extensions": [".js", ".jsx"],
+      "extra_extensions": [".jpg", ".svg", ".json", ".gif", ".css", ".scss", ".less"],
+      "modules_folder": "node_modules"
+    }
 
     self.handlers = [
       Handler(
         name="import_all_from",
         matchers=[
-          "import {variable}\.\*",
+          "import * as {variable} from {module}",
           "{variable}\.\*"
         ],
         keys=keys,
         force=True
       ),
       Handler(
-        name="import_from_prefixed",
+        name="import_from",
         matchers=[
-          "import {submodules}\.{module}"
-        ],
-        keys=keys,
-        force=True
-      ),
-      Handler(
-        name="require_from",
-        matchers=[
-          "require {module}\.{submodules}",
-          "{module}::{submodules}",
-          "extends {module}\.{submodules}"
+          "import {{submodules}} from [\'\"]{module}[\'\"]",
+          "import {variable}, {{submodules}} from [\'\"]{module}[\'\"]",
+          "{module}::{submodule}"
         ],
         keys=keys
       ),
       Handler(
-        name="import_from",
+        name="require_from",
         matchers=[
-          "{module}::{submodules}"
+          "require {module}\.{submodule}",
+          "{module}::{submodule}",
+          "extends {module}\.{submodule}"
         ],
         keys=keys
       ),
       Handler(
         name="import",
         matchers=[
-          "{variable}\.{submodules}",
+          "import {variable} from {module}",
+          "{variable}\.{submodule}",
           "import {variable}",
-          "(?P<module>[^\s\.]+)(\.[^\s]+){2,}",
-          "import {variable} from {module}"
+          "(?P<module>[^\s\.]+)(\.[^\s]+){2,}"
         ],
         keys=keys
       ),
@@ -90,89 +82,82 @@ class JavascriptInterpreter(Interpreter):
     self.setDefaultHandler("import")
 
   def parseModuleKey(self, value):
-    for ext in self.remove_extensions:
+    for ext in self.getSetting('remove_extensions'):
       if value.endswith(ext):
         return value[0:-len(ext)]
     return value
 
   def parseSubmodulesKey(self, value):
+    if type(value) is list :
+      return value
+
     submodules = value.split(',')
     return [ submodule.strip() for submodule in submodules ]
 
   def parseVariableKey(self, value):
     return joinStr(re.sub(r"!|@|\*", "", value), r"\/|-|\.")
 
-  def getFileQuery(self, interpreted):
+  def getQueryObject(self, interpreted):
     return interpreted.statements["module"]
 
-  def getModuleQuery(self, interpreted):
-    return interpreted.statements["module"]
-
-  def setStatementsByOption(self, interpreted, option_obj):
-    if option_obj["key"] == "containing_files":
-      interpreted.handler = self.handlers[3]
+  def onSearchResultChosen(self, interpreted, option_key, value):
+    if option_key == "containing_files":
+      interpreted.itype = "import_from"
       interpreted.statements['submodules'] = self.parseSubmodulesKey(interpreted.statements['variable'])
       del interpreted.statements['variable']
 
-    interpreted.statements['module'] = self.parseModuleKey(option_obj['value'])
+    interpreted.statements['module'] = self.parseModuleKey(value)
 
   def onInterprete(self, interpreted):
-
-    if len(interpreted.statements.keys()) == 0:
+    statements = interpreted.statements
+    if len(statements.keys()) == 0:
       index = 0
       keys = ["module", "variable"]
-      values = interpreted.sSelection.expression.split(":")
+      values = interpreted.simport.expression.split(":")
       length = len(values)
 
       for key in keys:
-        interpreted.statements[key] = values[index]
+        statements[key] = values[index]
         index += min(index + 1, length - 1)
     else:
-      if "module" not in interpreted.statements:
-        interpreted.statements["module"] = interpreted.statements["variable"]
+      if "module" not in statements:
+        statements["module"] = statements["variable"]
+
+      if "submodule" in statements:
+        if "submodules" not in statements:
+          statements["submodules"] = []
+        statements["submodules"].append(statements["submodule"])
+        statements.pop("submodule")
 
     return super().onInterprete(interpreted)
 
-  def parseStringToImport(self, import_str):
-    splited = re.search(self.find_imports_regex, import_str).groups()
+  def stringifyStatements(self, statements, itype=None, insert_type=Interpreted.IT_INSERT):
+    import_str = ''
 
-    import_dict = { "module": splited[2]}
+    if itype.startswith('require'):
+      if 'variable' in statements:
+        import_str = 'const '
+        import_str += statements['variable']
+        import_str += ' = '
 
-    if "{" not in splited[1]:
-      import_dict["variable"] = splited[1]
+      if 'module':
+        import_str += "require('{0}')".format(statements['module'])
+
     else:
-      if splited[1][0] == "{" and splited[1][-1] == "}":
-        submodules = splited[1][1:-1].split(",")
-      else:
-        regex = r"\{([^;]*)\}"
-        matches = re.search(regex, splited[1]).groups()
-        submodules = []
-        for match in matches:
-          submodules += submodules + match.split(",")
-        import_dict["variable"] = re.sub(regex + "|,", '', splited[1]).strip()
-
-      import_dict["submodules"] = [submodule.strip() for submodule in submodules]
-
-    return import_dict
-
-  def parseStatementsToString(self, statements, import_type=None, insert_type="insert"):
-    import_str = 'import '
-
-    if import_type:
-      if import_type == "import_all_from":
+      import_str = 'import '
+      if itype == "import_all_from":
         import_str += "* as "
 
-    if 'variable' in statements:
-      import_str += statements['variable']
-
-    if 'submodules' in statements:
       if 'variable' in statements:
-        import_str += ', '
-      import_str += "{{ {0} }}".format(", ".join(statements['submodules']))
+        import_str += statements['variable']
 
-    import_str += " from \'{0}\'".format(statements['module'])
+      if 'submodules' in statements:
+        if 'variable' in statements:
+          import_str += ', '
+        import_str += "{{ {0} }}".format(", ".join(statements['submodules']))
 
-    print(insert_type)
+      import_str += " from \'{0}\'".format(statements['module'])
+
     if insert_type == "insert_after":
       import_str = "\n" + import_str
     elif insert_type == "insert":
@@ -181,14 +166,17 @@ class JavascriptInterpreter(Interpreter):
 
     return import_str
 
-  def getComparatorRegex(self, statements):
-    return r"{0}({1})?$".format(statements['module'], "|".join(self.remove_extensions))
+  def resolveSimilarImports(self, interpreted, view_imports):
+    if interpreted.itype.startswith('import'):
+      regex = r"^{0}({1})?$".format(
+        interpreted.statements['module'],
+        "|".join(self.getSetting('remove_extensions'))
+      )
 
-  def compareStatements(self, first_statements, second_statements=None, regex=None):
-    if not regex:
-      if not second_statements:
-        return first_statements == second_statements
-      regex = self.getComparatorRegex(second_statements)
+      for vimport in view_imports:
+        if re.search(regex, vimport.statements['module']):
+          Interpreter.joinStatements(vimport.statements, interpreted.statements)
+          vimport.insert_type = Interpreted.IT_REPLACE_IMPORT
+          return vimport
 
-    print(regex, first_statements['module'])
-    return re.search(regex, first_statements['module'])
+    return interpreted

@@ -1,33 +1,19 @@
 class Interpreted:
-  key_str = {
-    "files": "Import",
-    "modules": "Import Module",
-    "containing_files": "Import From",
-    "extra_files": "Import"
-  }
+  IT_INSERT = "INSERT"
+  IT_INSERT_AFTER = "INSERT_AFTER"
+  IT_INSERT_BEFORE = "INSERT_BEFORE"
+  IT_REPLACE = "REPLACE"
+  IT_REPLACE_IMPORT = "REPLACE_IMPORT"
 
-  def __init__(self, interpreter, statements, import_type, sSelection):
+  def __init__(self, interpreter, statements, itype, simport):
     self.interpreter = interpreter
-    self.import_type = import_type
-    self.sSelection = sSelection
+    self.simport = simport
+    self.itype = itype
     self.statements = statements
-    self.options = {}
+    self.insert_type = Interpreted.IT_INSERT
 
-    interpreter.onInterprete(self)
+    # Fires onInterprete
+    self.interpreter.onInterprete(self)
 
   def __str__(self):
-    return self.interpreter.parseStatementsToString(self.statements, import_type=self.import_type)
-
-  def getOptionsArr(self):
-    arr = []
-    for key in self.options:
-      arr = arr + [ "{key}: {value}".format(key=Interpreted.key_str[key], value=option) for option in self.options[key] ]
-    return arr
-
-  def getOptionObjectByIndex(self, index):
-    i = 0
-    for key in self.options:
-      length = len(self.options[key])
-      if index < length:
-        return { "key": key, "value": self.options[key][index]  }
-      index = index - length
+    return self.interpreter.stringifyStatements(self.statements, itype=self.itype, insert_type=self.insert_type)

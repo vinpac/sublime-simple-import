@@ -1,2 +1,3 @@
 from .JavascriptInterpreter import JavascriptInterpreter
-__all__ = ["JavascriptInterpreter"]
+from .PythonInterpreter import PythonInterpreter
+__all__ = ["JavascriptInterpreter", "PythonInterpreter"]

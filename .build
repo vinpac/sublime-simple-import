@@ -6,12 +6,15 @@
 		"test/test.py",
 		"lib/utils.py",
 		"lib/interpreters/__init__.py",
+		"lib/interpreters/PythonInterpreter.py",
 		"lib/interpreters/JavascriptInterpreter.py",
 		"lib/interpreter/__init__.py",
+		"lib/interpreter/SImport.py",
 		"lib/interpreter/Interpreter.py",
 		"lib/interpreter/Interpreted.py",
 		"lib/interpreter/Handler.py",
-		"SimpleImport.py",
+		"lib/SimpleImport.py",
+		"SimpleImportCommand.py",
 		"ReloadPlugin.py"
 	]
 }
