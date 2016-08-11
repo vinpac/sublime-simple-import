@@ -1,6 +1,5 @@
 import re
 from ..utils import joinStr, ucfirst
-Interpreter
 
 class Interpreter:
 

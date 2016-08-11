@@ -1,5 +1,6 @@
 import re
 from os import path
+from ..interpreter import *
 
 class PythonInterpreter(Interpreter):
 

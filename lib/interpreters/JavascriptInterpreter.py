@@ -1,5 +1,6 @@
 import re
 from ..utils import joinStr
+from ..interpreter import *
 
 class JavascriptInterpreter(Interpreter):
 
