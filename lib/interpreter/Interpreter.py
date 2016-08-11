@@ -1,5 +1,6 @@
 import re
 from ..utils import joinStr, ucfirst
+from .Interpreted import Interpreted
 
 class Interpreter:
 
