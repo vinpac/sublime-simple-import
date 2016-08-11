@@ -18,6 +18,8 @@ class PendingImport:
     self.options = options
     self.resolved = False
 
+    print(options)
+
   def getOptionsArr(self):
     arr = []
     for key in self.options:

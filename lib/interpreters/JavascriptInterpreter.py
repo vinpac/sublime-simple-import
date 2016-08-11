@@ -1,13 +1,14 @@
-import re
+import sublime, re
 from ..utils import joinStr
 from ..interpreter import *
+
 
 class JavascriptInterpreter(Interpreter):
 
   def __init__(self):
 
     self.find_imports_regex = r"(import[\s\n]+((?:(?!from)[\s\S])*)[\s\n]+from[\s]+[\"\']([^\"\']+)[\"\'])"
-    self.find_exports_regex = r"(export\s+(const|let|var|function|class)\s+(?P<value>[^\s]+))"
+    self.find_exports_regex = r"(export\s+(const|let|var|function|class)\s+(?P<value>[\w]+))"
 
     keys = {
       "variable": "[^\s]+",
@@ -55,7 +56,7 @@ class JavascriptInterpreter(Interpreter):
       Handler(
         name="import",
         matchers=[
-          "import {variable} from {module}",
+          "import {variable} from [\'\"]{module}[\'\"]",
           "{variable}\.{submodule}",
           "import {variable}",
           "(?P<module>[^\s\.]+)(\.[^\s]+){2,}"
@@ -120,6 +121,8 @@ class JavascriptInterpreter(Interpreter):
       for key in keys:
         statements[key] = values[index]
         index += min(index + 1, length - 1)
+
+      statements["module"] = statements["module"]
     else:
       if "module" not in statements:
         statements["module"] = statements["variable"]
@@ -159,10 +162,8 @@ class JavascriptInterpreter(Interpreter):
 
       import_str += " from \'{0}\'".format(statements['module'])
 
-    if insert_type == "insert_after":
+    if insert_type == Interpreted.IT_INSERT_AFTER:
       import_str = "\n" + import_str
-    elif insert_type == "insert":
-      import_str = import_str + "\n"
 
 
     return import_str
@@ -179,5 +180,10 @@ class JavascriptInterpreter(Interpreter):
           Interpreter.joinStatements(vimport.statements, interpreted.statements)
           vimport.insert_type = Interpreted.IT_REPLACE_IMPORT
           return vimport
+
+    if len(view_imports):
+      region_point = view_imports[-1].simport.context_region.end()
+      interpreted.insert_type = Interpreted.IT_INSERT_AFTER
+      interpreted.simport.context_region = sublime.Region(region_point, region_point)
 
     return interpreted
