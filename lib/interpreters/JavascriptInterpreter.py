@@ -40,17 +40,7 @@ class JavascriptInterpreter(Interpreter):
         matchers=[
           "import {{submodules}} from [\'\"]{module}[\'\"]",
           "import {variable}, {{submodules}} from [\'\"]{module}[\'\"]",
-          "{module}\.{submodule}",
-          "{module}::{submodule}"
-        ],
-        keys=keys
-      ),
-      Handler(
-        name="require_from",
-        matchers=[
-          "require {module}\.{submodule}",
-          "{module}::{submodule}",
-          "{module}\.{submodule}"
+          "{submodule}::{module}"
         ],
         keys=keys
       ),
@@ -58,9 +48,18 @@ class JavascriptInterpreter(Interpreter):
         name="import",
         matchers=[
           "import {variable} from [\'\"]{module}[\'\"]",
-          "{variable}\.{submodule}",
+          "{variable}\.[^\s]+",
           "import {variable}",
           "(?P<module>[^\s\.]+)(\.[^\s]+){2,}"
+        ],
+        keys=keys
+      ),
+      Handler(
+        name="require_from",
+        matchers=[
+          "require {module}\.{submodule}",
+          "{submodule}::{module}",
+          "{module}\.{submodule}"
         ],
         keys=keys
       ),
@@ -114,25 +113,24 @@ class JavascriptInterpreter(Interpreter):
   def onInterprete(self, interpreted):
     statements = interpreted.statements
     if len(statements.keys()) == 0:
-      index = 0
-      keys = ["module", "variable"]
       values = interpreted.simport.expression.split(":")
       length = len(values)
 
-      for key in keys:
-        statements[key] = values[index]
-        index += min(index + 1, length - 1)
+      if length > 2:
+        statements["module"] = values[-1]
+        statements["submodules"] = values[:-1]
+      else:
+        statements["variable"] = values[0]
+        statements["module"] = values[1] if length == 2 else statements["variable"]
 
-      statements["module"] = statements["module"]
-    else:
-      if "module" not in statements:
-        statements["module"] = statements["variable"]
+    if "module" not in statements:
+      statements["module"] = statements["variable"]
 
-      if "submodule" in statements:
-        if "submodules" not in statements:
-          statements["submodules"] = []
-        statements["submodules"].append(statements["submodule"])
-        statements.pop("submodule")
+    if "submodule" in statements:
+      if "submodules" not in statements:
+        statements["submodules"] = []
+      statements["submodules"].append(statements["submodule"])
+      statements.pop("submodule")
 
     return super().onInterprete(interpreted)
 
