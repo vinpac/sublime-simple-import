@@ -1,4 +1,4 @@
 [
   { "keys": ["ctrl+alt+j"], "command": "simple_import"},
-  { "keys": ["ctrl+alt+i"], "command": "simple_import", "args": { "insert": true}}
+  { "keys": ["ctrl+alt+i"], "command": "simple_import", "args": { "no_replace_mode": true}}
 ]

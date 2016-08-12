@@ -10,7 +10,7 @@ class Interpreted:
     self.simport = simport
     self.itype = itype
     self.statements = statements
-    self.insert_type = Interpreted.IT_INSERT
+    self.insert_type = Interpreted.IT_REPLACE
 
     # Fires onInterprete
     self.interpreter.onInterprete(self)

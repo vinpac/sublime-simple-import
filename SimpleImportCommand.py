@@ -1,6 +1,7 @@
 import sublime, sublime_plugin, re, json
 from os import path
 from .lib.interpreter.SImport import SImport
+from .lib.interpreter.Interpreted import Interpreted
 from .lib.SimpleImport import SimpleImport
 
 
@@ -18,8 +19,6 @@ class PendingImport:
     self.options = options
     self.resolved = False
 
-    print(options)
-
   def getOptionsArr(self):
     arr = []
     for key in self.options:
@@ -36,7 +35,8 @@ class PendingImport:
 
 class SimpleImportCommand(sublime_plugin.TextCommand):
 
-  def run(self, edit):
+  def run(self, edit, no_replace_mode=False):
+    self.NO_REPLACE_MODE = no_replace_mode
     self.project_path = self.view.window().folders()[-1]
     self.view_path = path.dirname(self.view.file_name())
     self.view_dir_relpath = path.relpath(self.view_path, self.project_path)
@@ -139,7 +139,8 @@ class SimpleImportCommand(sublime_plugin.TextCommand):
     for interpreted in self.interpreted_list:
       resolved_interpreted = self.interpreter.resolveSimilarImports(
         interpreted,
-        self.view_imports
+        self.view_imports,
+        NO_REPLACE_MODE=self.NO_REPLACE_MODE
       )
 
       if resolved_interpreted not in self.imports_to_insert:
@@ -149,11 +150,16 @@ class SimpleImportCommand(sublime_plugin.TextCommand):
       self.handleInsertion(interpreted)
 
   def handleInsertion(self, interpreted):
-    self.view.run_command("replace", {
-      "characters": interpreted.__str__(),
-      "start": interpreted.simport.context_region.begin(),
-      "end": interpreted.simport.context_region.end()
-    })
+    if interpreted.insert_type == Interpreted.IT_INSERT:
+      self.view.run_command("insert_at", {
+        "characters": interpreted.__str__()
+      })
+    else:
+      self.view.run_command("replace", {
+        "characters": interpreted.__str__(),
+        "start": interpreted.simport.context_region.begin(),
+        "end": interpreted.simport.context_region.end()
+      })
 
   def parsePath(self, path):
     if path[:2] == "./" or path[:3] == "../":
@@ -183,5 +189,9 @@ class ReplaceCommand(sublime_plugin.TextCommand):
     if(end == False and end != 0):
       end = self.view.size()
     self.view.replace(edit,sublime.Region(start, end), characters)
+
+class InsertAtCommand(sublime_plugin.TextCommand):
+  def run(self, edit, characters, start=0):
+    self.view.insert(edit, start, characters)
 
 SimpleImport.loadInterpreters()

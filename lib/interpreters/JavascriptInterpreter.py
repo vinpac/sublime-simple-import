@@ -40,6 +40,7 @@ class JavascriptInterpreter(Interpreter):
         matchers=[
           "import {{submodules}} from [\'\"]{module}[\'\"]",
           "import {variable}, {{submodules}} from [\'\"]{module}[\'\"]",
+          "{module}\.{submodule}",
           "{module}::{submodule}"
         ],
         keys=keys
@@ -49,7 +50,7 @@ class JavascriptInterpreter(Interpreter):
         matchers=[
           "require {module}\.{submodule}",
           "{module}::{submodule}",
-          "extends {module}\.{submodule}"
+          "{module}\.{submodule}"
         ],
         keys=keys
       ),
@@ -135,7 +136,7 @@ class JavascriptInterpreter(Interpreter):
 
     return super().onInterprete(interpreted)
 
-  def stringifyStatements(self, statements, itype=None, insert_type=Interpreted.IT_INSERT):
+  def stringifyStatements(self, statements, itype=None, insert_type=Interpreted.IT_REPLACE):
     import_str = ''
 
     if itype.startswith('require'):
@@ -164,11 +165,12 @@ class JavascriptInterpreter(Interpreter):
 
     if insert_type == Interpreted.IT_INSERT_AFTER:
       import_str = "\n" + import_str
-
+    elif insert_type == Interpreted.IT_INSERT:
+      import_str += "\n"
 
     return import_str
 
-  def resolveSimilarImports(self, interpreted, view_imports):
+  def resolveSimilarImports(self, interpreted, view_imports, NO_REPLACE_MODE=False):
     if interpreted.itype.startswith('import'):
       regex = r"^{0}({1})?$".format(
         interpreted.statements['module'],
@@ -181,9 +183,12 @@ class JavascriptInterpreter(Interpreter):
           vimport.insert_type = Interpreted.IT_REPLACE_IMPORT
           return vimport
 
-    if len(view_imports):
-      region_point = view_imports[-1].simport.context_region.end()
-      interpreted.insert_type = Interpreted.IT_INSERT_AFTER
-      interpreted.simport.context_region = sublime.Region(region_point, region_point)
+    if NO_REPLACE_MODE:
+      if len(view_imports):
+        region_point = view_imports[-1].simport.context_region.end()
+        interpreted.insert_type = Interpreted.IT_INSERT_AFTER
+        interpreted.simport.context_region = sublime.Region(region_point, region_point)
+      else:
+        interpreted.insert_type = Interpreted.IT_INSERT
 
     return interpreted

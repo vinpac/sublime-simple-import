@@ -58,13 +58,17 @@ class Interpreter:
   def onSearchResultChosen(self, interpreted, option_key, value):
     interpreted.statements['module'] = value
 
-  def resolveSimilarImports(self, interpreted, view_imports):
+  def resolveSimilarImports(self, interpreted, view_imports, NO_REPLACE_MODE=False):
     return interpreted
 
   def getFileQueryRegex(self, filename):
+    if not self.getSetting("extensions"):
+      return None
     return r"({0}|{0}\/index)({1})$".format(filename, "|".join(self.getSetting('extensions')))
 
   def getExtraFileQueryRegex(self, filename):
+    if not self.getSetting("extra_extensions"):
+      return None
     return r"{0}({1})".format(filename, "|".join(self.getSetting('extra_extensions')))
 
 

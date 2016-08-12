@@ -56,7 +56,7 @@ class SimpleImport():
   @staticmethod
   def findByValue(interpreter, project_path, filename_query=None, containing_query=None, exclude_file=None):
     regex = interpreter.getFileQueryRegex(filename_query)
-    regex_extra_files = interpreter.getFileQueryRegex(filename_query)
+    regex_extra_files = interpreter.getExtraFileQueryRegex(filename_query)
     result = {
       "files": [],
       "containing_files": [],
@@ -77,7 +77,7 @@ class SimpleImport():
         if re.search(regex, path.join(relative_dir, filename), re.IGNORECASE):
           result["files"].append(path.join(relative_dir, filename))
         else:
-          if interpreter.getSetting('extra_extensions') and re.search(regex_extra_files, filename, re.IGNORECASE):
+          if regex_extra_files and re.search(regex_extra_files, path.join(relative_dir, filename), re.IGNORECASE):
             result["extra_files"].append(path.join(relative_dir, filename))
             pass
 

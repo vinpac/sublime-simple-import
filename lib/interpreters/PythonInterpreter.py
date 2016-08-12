@@ -86,7 +86,7 @@ class PythonInterpreter(Interpreter):
 
     return "from {0} import {1}".format(statements['module'], statements['variable'])
 
-  def resolveSimilarImports(self, interpreted, view_imports):
+  def resolveSimilarImports(self, interpreted, view_imports, NO_REPLACE_MODE=False):
     return interpreted
 
   def getFileQueryRegex(self, filename):
