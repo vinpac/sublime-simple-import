@@ -1,7 +1,11 @@
 Simple Import v2.0.0-alpha
-===================
+==========================
 
 `Simple import` is a plugin for Sublime Text that imports your modules. Currently it works with Javascript and Python. If you need to import modules in other languages [create an Issue](https://github.com/vinpac/sublime-simple-import/issues).
+
+![example gif](https://raw.githubusercontent.com/vinpac/sublime-simple-import/master/assets/example.gif)
+
+( This is an 1.x.x GIF. 2.x.x brings new features such as submoduling by searching into files for exports and support to multiple sintaxes )
 
 ## Examples
 
