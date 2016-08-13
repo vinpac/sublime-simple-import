@@ -2,41 +2,17 @@ import sublime, sublime_plugin, re, json
 from os import path
 from .lib.interpreter.SImport import SImport
 from .lib.interpreter.Interpreted import Interpreted
+from .lib.interpreter.PendingImport import PendingImport
 from .lib.SimpleImport import SimpleImport
-
-
-class PendingImport:
-
-  key_str = {
-    "files": "Import",
-    "modules": "Import Module",
-    "containing_files": "Import From",
-    "extra_files": "Import"
-  }
-
-  def __init__(self, interpreted, options):
-    self.interpreted = interpreted
-    self.options = options
-    self.resolved = False
-
-  def getOptionsArr(self):
-    arr = []
-    for key in self.options:
-      arr = arr + [ "{key}: {value}".format(key=PendingImport.key_str[key], value=option) for option in self.options[key] ]
-    return arr
-
-  def getOptionByIndex(self, index):
-    i = 0
-    for key in self.options:
-      length = len(self.options[key])
-      if index < length:
-        return { "key": key, "value": self.options[key][index]  }
-      index = index - length
 
 class SimpleImportCommand(sublime_plugin.TextCommand):
 
-  def run(self, edit, no_replace_mode=False):
+  def run(self, edit, no_replace_mode=False, panel_mode=False):
+    # modes
+    self.PANEL_MODE = panel_mode
     self.NO_REPLACE_MODE = no_replace_mode
+
+    # paths
     self.project_path = self.view.window().folders()[-1]
     self.view_path = path.dirname(self.view.file_name())
     self.view_dir_relpath = path.relpath(self.view_path, self.project_path)
@@ -77,37 +53,54 @@ class SimpleImportCommand(sublime_plugin.TextCommand):
         context_region
       )
 
-      if not len(simport.expression.strip()):
+      if not panel_mode and not len(simport.expression.strip()):
         continue
 
       interpreted = self.interpreter.interprete(simport)
       self.interpreted_list.append(interpreted)
 
-      query = self.interpreter.getQueryObject(interpreted)
 
-      if query != False:
+      if panel_mode:
         pending_import = PendingImport(
           interpreted,
-          SimpleImport.query(
-            query,
+          SimpleImport.findAll(
             self.interpreter,
-            self.project_path,
-            exclude=path.join(path.join(self.view_dir_relpath, self.view_filename))
+            self.project_path
           )
         )
 
-        self.pending_imports.append(pending_import)
+        self.view.window().show_quick_panel(
+          pending_import.getOptionsArr(),
+          self.onOptionSelected
+        )
+      else:
+        query = self.interpreter.getQueryObject(interpreted)
 
+        if query != False:
+          pending_import = PendingImport(
+            interpreted,
+            SimpleImport.query(
+              query,
+              self.interpreter,
+              self.project_path,
+              exclude=path.join(path.join(self.view_dir_relpath, self.view_filename))
+            )
+          )
+
+      self.pending_imports.append(pending_import)
+
+      if panel_mode:
+        return
 
     for pending_import in self.pending_imports:
-      options_arr = pending_import.getOptionsArr()
+      options_arr = pending_import.getOptionsArr(include_keys=True)
 
       if len(options_arr) > 1:
-        self.view.show_popup_menu(options_arr, self.handleOptionClick)
+        self.view.show_popup_menu(options_arr, self.onOptionSelected)
       else:
-        self.handleOptionClick(len(options_arr) - 1)
+        self.onOptionSelected(len(options_arr) - 1)
 
-  def handleOptionClick(self, index):
+  def onOptionSelected(self, index):
     for pending_import in self.pending_imports:
       if not pending_import.resolved:
         pending_import.resolved = True
@@ -128,7 +121,8 @@ class SimpleImportCommand(sublime_plugin.TextCommand):
           self.interpreter.onSearchResultChosen(
             pending_import.interpreted,
             option_obj['key'],
-            option_obj['value']
+            option_obj['value'],
+            PANEL_MODE=self.PANEL_MODE
           )
         break
 
@@ -137,10 +131,11 @@ class SimpleImportCommand(sublime_plugin.TextCommand):
 
   def onPendingImportsResolved(self):
     for interpreted in self.interpreted_list:
-      resolved_interpreted = self.interpreter.resolveSimilarImports(
+      resolved_interpreted = self.interpreter.parseBeforeInsert(
         interpreted,
         self.view_imports,
-        NO_REPLACE_MODE=self.NO_REPLACE_MODE
+        NO_REPLACE_MODE=self.NO_REPLACE_MODE,
+        PANEL_MODE=self.PANEL_MODE
       )
 
       if resolved_interpreted not in self.imports_to_insert:

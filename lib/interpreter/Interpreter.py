@@ -1,4 +1,5 @@
 import re
+from os import path
 from ..utils import joinStr, ucfirst
 from .Interpreted import Interpreted
 
@@ -27,8 +28,8 @@ class Interpreter:
     self.find_imports_regex = None
     self.find_exports_regex = None
 
-  def getSetting(self, key):
-    return self.settings[key] if key in self.settings else None
+  def getSetting(self, key, otherwise=None):
+    return self.settings[key] if key in self.settings else otherwise
 
   def onInterprete(self, interpreted):
     for key in interpreted.statements:
@@ -55,10 +56,12 @@ class Interpreter:
   def getDefaultHandler(self):
     return self.defaultHandler if self.defaultHandler else self.handlers[0]
 
-  def onSearchResultChosen(self, interpreted, option_key, value):
+  def onSearchResultChosen(self, interpreted, option_key, value, PANEL_MODE=False):
+    if PANEL_MODE:
+      interpreted.statements['variable'] = path.basename(value)
     interpreted.statements['module'] = value
 
-  def resolveSimilarImports(self, interpreted, view_imports, NO_REPLACE_MODE=False):
+  def parseBeforeInsert(self, interpreted, view_imports, NO_REPLACE_MODE=False, PANEL_MODE=False):
     return interpreted
 
   def getFileQueryRegex(self, filename):

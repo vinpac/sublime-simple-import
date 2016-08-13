@@ -10,6 +10,7 @@
 		"lib/interpreters/JavascriptInterpreter.py",
 		"lib/interpreter/__init__.py",
 		"lib/interpreter/SImport.py",
+		"lib/interpreter/PendingImport.py",
 		"lib/interpreter/Interpreter.py",
 		"lib/interpreter/Interpreted.py",
 		"lib/interpreter/Handler.py",

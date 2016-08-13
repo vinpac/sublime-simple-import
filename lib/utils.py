@@ -9,3 +9,9 @@ def joinStr(value, regex=None):
 
 def ucfirst(string):
   return string[0].upper() + string[1:]
+
+def endswith(suffixes, name):
+  for suffix in suffixes:
+    if name.endswith(suffix):
+      return True
+  return False

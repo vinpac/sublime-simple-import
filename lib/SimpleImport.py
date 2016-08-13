@@ -1,4 +1,5 @@
 import re
+from .utils import endswith
 from os import walk, path
 from .interpreters import *
 from .interpreters import __all__ as InterpretersNames
@@ -20,7 +21,31 @@ class SimpleImport():
     return None
 
   @staticmethod
-  def getInstalledModules(interpreter, project_path):
+  def findAll(interpreter, project_path, include_extras=False):
+    files = []
+    extra_files = []
+    extensions = interpreter.getSetting('extensions', [])
+    extra_extensions = interpreter.getSetting('extra_extensions', [])
+    excluded_paths = [ path.normpath(epath) for epath in interpreter.getSetting("excluded_paths", []) ]
+
+    for dirpath, dirnames, filenames in walk(project_path, topdown=True):
+      relative_dir = path.relpath(dirpath, project_path)
+      dirnames[:] = [dirname for dirname in dirnames if path.normpath(path.join(relative_dir, dirname)) not in excluded_paths]
+      for filename in filenames:
+        if endswith(extensions, filename):
+          files.append(path.join(relative_dir, filename))
+          continue
+
+        if endswith(extra_extensions, filename):
+          extra_files.append(path.join(relative_dir, filename))
+    return {
+      "files": files,
+      "extra_files": extra_files,
+      "modules": SimpleImport.findAllModules(interpreter, project_path)
+    }
+
+  @staticmethod
+  def findAllModules(interpreter, project_path):
     if not interpreter.getSetting('modules_folder'):
       return []
 
@@ -43,7 +68,7 @@ class SimpleImport():
     if not value:
       return []
 
-    installed_modules = SimpleImport.getInstalledModules(interpreter, project_path)
+    installed_modules = SimpleImport.findAllModules(interpreter, project_path)
     value = SimpleImport.normalizeValue(value)
     arr = [ module for module in installed_modules if SimpleImport.normalizeValue(module) == value ]
     arr.sort()
@@ -51,12 +76,13 @@ class SimpleImport():
 
   @staticmethod
   def isInstalledModule(value, interpreter, project_path):
-    return value in SimpleImport.getInstalledModules(interpreter, project_path)
+    return value in SimpleImport.findAllModules(interpreter, project_path)
 
   @staticmethod
   def findByValue(interpreter, project_path, filename_query=None, containing_query=None, exclude_file=None):
     regex = interpreter.getFileQueryRegex(filename_query)
     regex_extra_files = interpreter.getExtraFileQueryRegex(filename_query)
+    excluded_paths = [ path.normpath(epath) for epath in interpreter.getSetting("excluded_paths", ['.git']) ]
     result = {
       "files": [],
       "containing_files": [],
@@ -65,8 +91,6 @@ class SimpleImport():
 
     for dirpath, dirnames, filenames in walk(project_path, topdown=True):
       relative_dir = path.relpath(dirpath, project_path)
-      excluded_paths = [ "node_modules", ".git" ]
-      excluded_paths = [ path.normpath(epath) for epath in excluded_paths ]
       # Change excluding folders
       dirnames[:] = [dirname for dirname in dirnames if path.normpath(path.join(relative_dir, dirname)) not in excluded_paths]
       for filename in filenames:
@@ -83,7 +107,7 @@ class SimpleImport():
 
         if containing_query:
           # Find files that export the value
-          if True in [ filename.endswith(extension) for extension in interpreter.getSetting('extensions') ]:
+          if endswith(interpreter.getSetting('extensions', []), filename):
             matches = re.findall(interpreter.find_exports_regex, open(path.join(dirpath, filename)).read())
             for match in matches:
               if match[2] == containing_query:

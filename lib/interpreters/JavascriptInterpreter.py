@@ -1,4 +1,5 @@
 import sublime, re
+from os import path
 from ..utils import joinStr
 from ..interpreter import *
 
@@ -22,6 +23,7 @@ class JavascriptInterpreter(Interpreter):
       "extensions": [".js", ".jsx"],
       "remove_extensions": [".js", ".jsx"],
       "extra_extensions": [".jpg", ".svg", ".json", ".gif", ".css", ".scss", ".less"],
+      "excluded_paths": ["node_modules", ".git"],
       "modules_folder": "node_modules"
     }
 
@@ -29,11 +31,18 @@ class JavascriptInterpreter(Interpreter):
       Handler(
         name="import_all_from",
         matchers=[
-          "import * as {variable} from {module}",
+          "import \* as {variable} from {module}",
           "{variable}\.\*"
         ],
         keys=keys,
         force=True
+      ),
+      Handler(
+        name="import_pure",
+        matchers=[
+          "imp {module}"
+        ],
+        keys=keys
       ),
       Handler(
         name="import_from",
@@ -83,10 +92,25 @@ class JavascriptInterpreter(Interpreter):
 
     self.setDefaultHandler("import")
 
-  def parseModuleKey(self, value):
-    for ext in self.getSetting('remove_extensions'):
+  def removeExtensions(self, value):
+    extensions = self.getSetting('extensions', []) + self.getSetting('extra_extensions', [])
+    for ext in extensions:
       if value.endswith(ext):
         return value[0:-len(ext)]
+    return value
+
+
+  def parseModuleKey(self, value):
+    #remove extensions
+    for ext in self.getSetting('remove_extensions'):
+      if value.endswith(ext):
+        value = value[0:-len(ext)]
+        break
+
+    # remove /index from path
+    if "/" in value and value.endswith("/index"):
+      value = value[:-6]
+
     return value
 
   def parseSubmodulesKey(self, value):
@@ -102,13 +126,18 @@ class JavascriptInterpreter(Interpreter):
   def getQueryObject(self, interpreted):
     return interpreted.statements["module"]
 
-  def onSearchResultChosen(self, interpreted, option_key, value):
-    if option_key == "containing_files":
+  def onSearchResultChosen(self, interpreted, option_key, value, PANEL_MODE=False):
+    statements = interpreted.statements
+    if (PANEL_MODE and len(statements['variable'])) or option_key == "containing_files":
       interpreted.itype = "import_from"
-      interpreted.statements['submodules'] = self.parseSubmodulesKey(interpreted.statements['variable'])
-      del interpreted.statements['variable']
+      statements['submodules'] = self.parseSubmodulesKey(interpreted.statements['variable'])
+      del statements['variable']
+    elif PANEL_MODE:
+      if option_key != "modules":
+        statements['variable'] = path.basename(value)
+      statements['variable'] = self.parseVariableKey(self.removeExtensions(statements['variable']))
 
-    interpreted.statements['module'] = self.parseModuleKey(value)
+    statements['module'] = self.parseModuleKey(value)
 
   def onInterprete(self, interpreted):
     statements = interpreted.statements
@@ -148,18 +177,21 @@ class JavascriptInterpreter(Interpreter):
 
     else:
       import_str = 'import '
-      if itype == "import_all_from":
-        import_str += "* as "
+      if itype != "import_pure":
+        if itype == "import_all_from":
+          import_str += "* as "
 
-      if 'variable' in statements:
-        import_str += statements['variable']
-
-      if 'submodules' in statements:
         if 'variable' in statements:
-          import_str += ', '
-        import_str += "{{ {0} }}".format(", ".join(statements['submodules']))
+          import_str += statements['variable']
 
-      import_str += " from \'{0}\'".format(statements['module'])
+        if 'submodules' in statements:
+          if 'variable' in statements:
+            import_str += ', '
+          import_str += "{{ {0} }}".format(", ".join(statements['submodules']))
+
+        import_str += " from "
+
+      import_str += "\'{0}\'".format(statements['module'])
 
     if insert_type == Interpreted.IT_INSERT_AFTER:
       import_str = "\n" + import_str
@@ -168,7 +200,7 @@ class JavascriptInterpreter(Interpreter):
 
     return import_str
 
-  def resolveSimilarImports(self, interpreted, view_imports, NO_REPLACE_MODE=False):
+  def parseBeforeInsert(self, interpreted, view_imports, NO_REPLACE_MODE=False, PANEL_MODE=False):
     if interpreted.itype.startswith('import'):
       regex = r"^{0}({1})?$".format(
         interpreted.statements['module'],
@@ -181,7 +213,7 @@ class JavascriptInterpreter(Interpreter):
           vimport.insert_type = Interpreted.IT_REPLACE_IMPORT
           return vimport
 
-    if NO_REPLACE_MODE:
+    if NO_REPLACE_MODE or PANEL_MODE:
       if len(view_imports):
         region_point = view_imports[-1].simport.context_region.end()
         interpreted.insert_type = Interpreted.IT_INSERT_AFTER
