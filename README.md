@@ -1,6 +1,8 @@
 Simple Import v2.0.0-alpha
 ==========================
 
+[![Join the chat at https://gitter.im/sublime-simple-import/Lobby](https://badges.gitter.im/sublime-simple-import/Lobby.svg)](https://gitter.im/sublime-simple-import/Lobby?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
+
 `Simple import` is a plugin for Sublime Text that imports your modules. Currently it works with Javascript and Python. If you need to import modules in other languages [create an Issue](https://github.com/vinpac/sublime-simple-import/issues).
 
 ![example gif](https://raw.githubusercontent.com/vinpac/sublime-simple-import/master/assets/example.gif)
