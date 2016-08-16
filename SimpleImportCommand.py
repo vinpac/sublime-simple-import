@@ -13,8 +13,8 @@ class SimpleImportCommand(sublime_plugin.TextCommand):
     self.NO_REPLACE_MODE = no_replace_mode
 
     # paths
-    self.project_path = self.view.window().folders()[-1]
     self.view_path = path.dirname(self.view.file_name())
+    self.project_path = self.getProjectFolder()
     self.view_dir_relpath = path.relpath(self.view_path, self.project_path)
     self.view_filename = path.basename(self.view.file_name())
     view_syntax = path.basename(self.view.settings().get('syntax')).lower()
@@ -178,6 +178,13 @@ class SimpleImportCommand(sublime_plugin.TextCommand):
       )
         for region in regions
     ]
+
+  def getProjectFolder(self):
+    folders = self.view.window().folders()
+    for folder in folders:
+      if self.view_path.startswith(folder):
+        return folder
+    return folders[0]
 
 class ReplaceCommand(sublime_plugin.TextCommand):
   def run(self, edit, characters, start=0, end=False):

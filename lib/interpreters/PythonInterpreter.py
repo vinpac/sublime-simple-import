@@ -73,7 +73,7 @@ class PythonInterpreter(Interpreter):
 
     return super().onInterprete(interpreted)
 
-  def onSearchResultChosen(self, interpreted, option_key, value):
+  def onSearchResultChosen(self, interpreted, option_key, value, PANEL_MODE=False):
     if option_key != 'modules':
       value = path.dirname(value) if value.endswith('/__init__.py') else value
 
@@ -86,7 +86,7 @@ class PythonInterpreter(Interpreter):
 
     return "from {0} import {1}".format(statements['module'], statements['variable'])
 
-  def resolveSimilarImports(self, interpreted, view_imports, NO_REPLACE_MODE=False):
+  def parseBeforeInsert(self, interpreted, view_imports, NO_REPLACE_MODE=False, PANEL_MODE=False):
     return interpreted
 
   def getFileQueryRegex(self, filename):
