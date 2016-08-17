@@ -108,6 +108,7 @@ class SimpleImport():
         if containing_query:
           # Find files that export the value
           if endswith(interpreter.getSetting('extensions', []), filename):
+            print(path.join(dirpath, filename))
             matches = re.findall(interpreter.find_exports_regex, open(path.join(dirpath, filename)).read())
             for match in matches:
               if match[2] == containing_query:

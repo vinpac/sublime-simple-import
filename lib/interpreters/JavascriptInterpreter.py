@@ -8,7 +8,7 @@ class JavascriptInterpreter(Interpreter):
 
   def __init__(self):
 
-    self.find_imports_regex = r"(import[\s\n]+((?:(?!from)[\s\S])*)[\s\n]+from[\s]+[\"\']([^\"\']+)[\"\'])"
+    self.find_imports_regex = r"(import[\s\n]+((?:(?!from|;)[\s\S])*)[\s\n]+from[\s]+[\"\']([^\"\']+)[\"\'])"
     self.find_exports_regex = r"(export\s+(const|let|var|function|class)\s+(?P<value>[\w]+))"
 
     keys = {
