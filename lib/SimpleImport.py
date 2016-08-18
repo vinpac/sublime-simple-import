@@ -82,6 +82,7 @@ class SimpleImport():
   def findByValue(interpreter, project_path, filename_query=None, containing_query=None, exclude_file=None):
     regex = interpreter.getFileQueryRegex(filename_query)
     regex_extra_files = interpreter.getExtraFileQueryRegex(filename_query)
+    extensions = interpreter.getSetting('extensions')
     excluded_paths = [ path.normpath(epath) for epath in interpreter.getSetting("excluded_paths", ['.git']) ]
     result = {
       "files": [],
@@ -107,12 +108,14 @@ class SimpleImport():
 
         if containing_query:
           # Find files that export the value
-          if endswith(interpreter.getSetting('extensions', []), filename):
-            print(path.join(dirpath, filename))
-            matches = re.findall(interpreter.find_exports_regex, open(path.join(dirpath, filename)).read())
-            for match in matches:
-              if match[2] == containing_query:
-                result["containing_files"].append(path.join(relative_dir, filename))
+          if endswith(extensions, filename):
+            try:
+              matches = re.findall(interpreter.find_exports_regex, open(path.join(dirpath, filename)).read())
+              for match in matches:
+                if match[2] == containing_query:
+                  result["containing_files"].append(path.join(relative_dir, filename))
+            except IOError:
+              print("SimpleImport: Could not read", path.join(dirpath, filename))
 
     return result
 
