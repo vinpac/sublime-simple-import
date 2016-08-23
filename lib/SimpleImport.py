@@ -7,6 +7,10 @@ from .interpreters import __all__ as InterpretersNames
 class SimpleImport():
   interpreters = {}
 
+  PUSH_MODE    = "PUSH_MODE"
+  PANEL_MODE   = "PANEL_MODE"
+  REPLACE_MODE = "REPLACE_MODE"
+
   @staticmethod
   def loadInterpreters():
     interpreter_regex = r"Interpreter$"

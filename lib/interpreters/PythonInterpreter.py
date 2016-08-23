@@ -1,6 +1,7 @@
 import re
 from os import path
 from ..interpreter import *
+from ..SimpleImport import SimpleImport
 
 class PythonInterpreter(Interpreter):
 
@@ -64,10 +65,8 @@ class PythonInterpreter(Interpreter):
       "file": interpreted.statements["module"]
     }
 
-  def onInterprete(self, interpreted):
+  def onInterprete(self, interpreted, mode=SimpleImport.REPLACE_MODE):
     statements = interpreted.statements
-
-    print(statements)
 
     if not len(statements.keys()):
       statements['module'] = interpreted.simport.expression
@@ -77,7 +76,7 @@ class PythonInterpreter(Interpreter):
 
     return super().onInterprete(interpreted)
 
-  def onSearchResultChosen(self, interpreted, option_key, value, PANEL_MODE=False):
+  def onSearchResultChosen(self, interpreted, option_key, value, mode=SimpleImport.REPLACE_MODE):
     if option_key != 'modules':
       value = path.dirname(value) if value.endswith('/__init__.py') else value
 
@@ -89,7 +88,7 @@ class PythonInterpreter(Interpreter):
 
     return "from {0} import {1}".format(statements['module'], statements['variable'])
 
-  def parseBeforeInsert(self, interpreted, view_imports, NO_REPLACE_MODE=False, PANEL_MODE=False):
+  def parseBeforeInsert(self, interpreted, view_imports, mode=SimpleImport.REPLACE_MODE):
     return interpreted
 
   def getFileQueryRegex(self, filename):

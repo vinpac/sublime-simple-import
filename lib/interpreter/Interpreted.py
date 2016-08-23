@@ -12,8 +12,5 @@ class Interpreted:
     self.statements = statements
     self.insert_type = Interpreted.IT_REPLACE
 
-    # Fires onInterprete
-    self.interpreter.onInterprete(self)
-
   def __str__(self):
     return self.interpreter.stringifyStatements(self.statements, itype=self.itype, insert_type=self.insert_type)

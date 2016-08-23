@@ -1,5 +1,5 @@
 [
   { "keys": ["ctrl+alt+j"], "command": "simple_import"},
-  { "keys": ["ctrl+alt+i"], "command": "simple_import", "args": { "no_replace_mode": true}},
+  { "keys": ["ctrl+alt+i"], "command": "simple_import", "args": { "push_mode": true}},
   { "keys": ["ctrl+alt+k"], "command": "simple_import", "args": { "panel_mode": true}}
 ]

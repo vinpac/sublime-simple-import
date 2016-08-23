@@ -4,6 +4,7 @@ from ..utils import joinStr, ucfirst
 from .Interpreted import Interpreted
 from ..utils import endswith
 from ..utils import getsuffix
+from ..SimpleImport import SimpleImport
 
 class Interpreter:
 
@@ -31,7 +32,7 @@ class Interpreter:
   def getSetting(self, key, otherwise=None):
     return self.settings[key] if key in self.settings else otherwise
 
-  def onInterprete(self, interpreted):
+  def onInterprete(self, interpreted, mode=SimpleImport.REPLACE_MODE):
     for key in interpreted.statements:
       fn = getattr(self, joinStr("parse" + ucfirst(key) + "Key"),  None)
       if callable(fn):
@@ -56,12 +57,12 @@ class Interpreter:
   def getDefaultHandler(self):
     return self.defaultHandler if self.defaultHandler else self.handlers[0]
 
-  def onSearchResultChosen(self, interpreted, option_key, value, PANEL_MODE=False):
-    if PANEL_MODE:
+  def onSearchResultChosen(self, interpreted, option_key, value, mode=SimpleImport.REPLACE_MODE):
+    if mode == SimpleImport.PANEL_MODE:
       interpreted.statements['variable'] = path.basename(value)
     interpreted.statements['module'] = value
 
-  def parseBeforeInsert(self, interpreted, view_imports, NO_REPLACE_MODE=False, PANEL_MODE=False):
+  def parseBeforeInsert(self, interpreted, view_imports, mode=SimpleImport.REPLACE_MODE):
     return interpreted
 
   def getFileMatcher(self, value):

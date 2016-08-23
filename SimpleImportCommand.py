@@ -7,10 +7,13 @@ from .lib.SimpleImport import SimpleImport
 
 class SimpleImportCommand(sublime_plugin.TextCommand):
 
-  def run(self, edit, no_replace_mode=False, panel_mode=False):
+  def run(self, edit, push_mode=False, panel_mode=False):
     # modes
-    self.PANEL_MODE = panel_mode
-    self.NO_REPLACE_MODE = no_replace_mode
+    self.mode = SimpleImport.REPLACE_MODE
+    if push_mode:
+      self.mode = SimpleImport.PUSH_MODE
+    elif panel_mode:
+      self.mode = SimpleImport.PANEL_MODE
 
     # paths
     self.view_path = path.dirname(self.view.file_name())
@@ -53,14 +56,15 @@ class SimpleImportCommand(sublime_plugin.TextCommand):
         context_region
       )
 
-      if not panel_mode and not len(simport.expression.strip()):
+      if not self.isPanelMode() and not len(simport.expression.strip()):
         continue
 
       interpreted = self.interpreter.interprete(simport)
+      self.interpreter.onInterprete(interpreted, mode=self.mode)
       self.interpreted_list.append(interpreted)
 
 
-      if panel_mode:
+      if self.isPanelMode():
         pending_import = PendingImport(
           interpreted,
           SimpleImport.findAll(
@@ -89,7 +93,7 @@ class SimpleImportCommand(sublime_plugin.TextCommand):
 
       self.pending_imports.append(pending_import)
 
-      if panel_mode:
+      if self.isPanelMode():
         return
 
     for pending_import in self.pending_imports:
@@ -122,7 +126,7 @@ class SimpleImportCommand(sublime_plugin.TextCommand):
             pending_import.interpreted,
             option_obj['key'],
             option_obj['value'],
-            PANEL_MODE=self.PANEL_MODE
+            mode=self.mode
           )
         break
 
@@ -134,8 +138,7 @@ class SimpleImportCommand(sublime_plugin.TextCommand):
       resolved_interpreted = self.interpreter.parseBeforeInsert(
         interpreted,
         self.view_imports,
-        NO_REPLACE_MODE=self.NO_REPLACE_MODE,
-        PANEL_MODE=self.PANEL_MODE
+        mode=self.mode
       )
 
       if resolved_interpreted not in self.imports_to_insert:
@@ -178,6 +181,9 @@ class SimpleImportCommand(sublime_plugin.TextCommand):
       )
         for region in regions
     ]
+
+  def isPanelMode(self):
+    return self.mode == SimpleImport.PANEL_MODE
 
   def getProjectFolder(self):
     folders = self.view.window().folders()
