@@ -2,6 +2,8 @@ import re
 from os import path
 from ..utils import joinStr, ucfirst
 from .Interpreted import Interpreted
+from ..utils import endswith
+from ..utils import getsuffix
 
 class Interpreter:
 
@@ -17,12 +19,10 @@ class Interpreter:
       else:
         s1[key] = s2[key]
 
-  def __init__(self, syntax, handlers, settings={}, extensions=[], extra_extensions=[], keys=[], defaultHandler=None):
+  def __init__(self, syntax, handlers, settings={}, keys=[], defaultHandler=None):
     self.syntax = syntax
     self.handlers = handlers
     self.keys = keys
-    self.extensions = extensions
-    self.extra_extensions = extra_extensions
     self.defaultHandler = defaultHandler
     self.settings = settings
     self.find_imports_regex = None
@@ -64,16 +64,42 @@ class Interpreter:
   def parseBeforeInsert(self, interpreted, view_imports, NO_REPLACE_MODE=False, PANEL_MODE=False):
     return interpreted
 
-  def getFileQueryRegex(self, filename):
-    if not self.getSetting("extensions"):
-      return None
-    return r"({0}|{0}\/index)({1})$".format(filename, "|".join(self.getSetting('extensions')))
+  def getFileMatcher(self, value):
+    return r"({0}|{1})(\/index)?({2})$".format(
+      value,
+      self.normalizeValue(value),
+      "|".join(self.getSetting('extensions', [])))
 
-  def getExtraFileQueryRegex(self, filename):
-    if not self.getSetting("extra_extensions"):
-      return None
-    return r"{0}({1})".format(filename, "|".join(self.getSetting('extra_extensions')))
+  def getExtraFilesMatcher(self, value):
+    return r"({0}|{1})({2})$".format(
+      value,
+      self.normalizeValue(value),
+      '|'.join(self.getSetting('extra_extensions', []))
+    )
 
+  def isValidFile(self, filename):
+    return endswith(self.getSetting('extensions', []), filename)
+
+  def isValidExtraFile(self, filename):
+    return endswith(self.getSetting('extra_extensions', []), filename)
+
+  def normalizeValue(self, value):
+    return re.sub(r"-|\.", "", value).lower()
+
+  def matchFilePathWithRegex(self, filename, regex, dirpath=None, is_extra=False):
+    if dirpath:
+      extensions = self.getSetting('extensions' if not is_extra else 'extra_extensions', [])
+
+      extension = getsuffix(extensions, filename)
+      if not extension:
+        return False
+
+      return re.search(
+        regex,
+        self.normalizeValue(path.join(dirpath, filename[:len(extension) * -1])) + extension,
+        re.IGNORECASE
+      )
+    return re.search(regex, filename, re.IGNORECASE)
 
   def setDefaultHandler(self, handlerName):
     for handler in self.handlers:

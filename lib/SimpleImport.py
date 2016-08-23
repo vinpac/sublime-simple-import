@@ -24,19 +24,17 @@ class SimpleImport():
   def findAll(interpreter, project_path, include_extras=False):
     files = []
     extra_files = []
-    extensions = interpreter.getSetting('extensions', [])
-    extra_extensions = interpreter.getSetting('extra_extensions', [])
     excluded_paths = [ path.normpath(epath) for epath in interpreter.getSetting("excluded_paths", []) ]
 
     for dirpath, dirnames, filenames in walk(project_path, topdown=True):
       relative_dir = path.relpath(dirpath, project_path)
       dirnames[:] = [dirname for dirname in dirnames if path.normpath(path.join(relative_dir, dirname)) not in excluded_paths]
       for filename in filenames:
-        if endswith(extensions, filename):
+        if interpreter.isValidFile(filename):
           files.append(path.join(relative_dir, filename))
           continue
 
-        if endswith(extra_extensions, filename):
+        if interpreter.isValidExtraFile(filename):
           extra_files.append(path.join(relative_dir, filename))
     return {
       "files": files,
@@ -60,17 +58,13 @@ class SimpleImport():
     return modules
 
   @staticmethod
-  def normalizeValue(value):
-    return re.sub(r"-|\.", "", value).lower()
-
-  @staticmethod
   def findRelatedInstalledModules(value, interpreter, project_path):
     if not value:
       return []
 
     installed_modules = SimpleImport.findAllModules(interpreter, project_path)
-    value = SimpleImport.normalizeValue(value)
-    arr = [ module for module in installed_modules if SimpleImport.normalizeValue(module) == value ]
+    value = interpreter.normalizeValue(value)
+    arr = [ module for module in installed_modules if interpreter.normalizeValue(module) == value ]
     arr.sort()
     return arr
 
@@ -80,9 +74,8 @@ class SimpleImport():
 
   @staticmethod
   def findByValue(interpreter, project_path, filename_query=None, containing_query=None, exclude_file=None):
-    regex = interpreter.getFileQueryRegex(filename_query)
-    regex_extra_files = interpreter.getExtraFileQueryRegex(filename_query)
-    extensions = interpreter.getSetting('extensions')
+    regex = interpreter.getFileMatcher(filename_query)
+    regex_extra_files = interpreter.getExtraFilesMatcher(filename_query)
     excluded_paths = [ path.normpath(epath) for epath in interpreter.getSetting("excluded_paths", ['.git']) ]
     result = {
       "files": [],
@@ -99,16 +92,15 @@ class SimpleImport():
           continue
 
         # Find files with name equal the value
-        if re.search(regex, path.join(relative_dir, filename), re.IGNORECASE):
+        if interpreter.matchFilePathWithRegex(filename, regex, dirpath=relative_dir):
           result["files"].append(path.join(relative_dir, filename))
-        else:
-          if regex_extra_files and re.search(regex_extra_files, path.join(relative_dir, filename), re.IGNORECASE):
-            result["extra_files"].append(path.join(relative_dir, filename))
-            pass
+        elif interpreter.matchFilePathWithRegex(filename, regex_extra_files, dirpath=relative_dir, is_extra=True):
+          result["extra_files"].append(path.join(relative_dir, filename))
+          pass
 
         if containing_query:
           # Find files that export the value
-          if endswith(extensions, filename):
+          if interpreter.isValidFile(filename):
             try:
               matches = re.findall(interpreter.find_exports_regex, open(path.join(dirpath, filename)).read())
               for match in matches:

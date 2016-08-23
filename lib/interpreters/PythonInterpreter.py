@@ -9,7 +9,8 @@ class PythonInterpreter(Interpreter):
     self.find_exports_regex = None
 
     keys = {
-      "module": "[^\s]+"
+      "module": "[^\s]+",
+      "variable": "[^\s]+"
     }
 
     self.syntax = "python"
@@ -32,7 +33,8 @@ class PythonInterpreter(Interpreter):
       Handler(
         name="import_from",
         matchers=[
-          "from {module} import {variable}"
+          "from {module} import {variable}",
+          "{variable}\:\:{module}"
         ],
         keys=keys
       ),
@@ -65,6 +67,8 @@ class PythonInterpreter(Interpreter):
   def onInterprete(self, interpreted):
     statements = interpreted.statements
 
+    print(statements)
+
     if not len(statements.keys()):
       statements['module'] = interpreted.simport.expression
     else:
@@ -80,7 +84,6 @@ class PythonInterpreter(Interpreter):
     interpreted.statements['module'] = self.parseModuleKey(value)
 
   def stringifyStatements(self, statements, itype=None, insert_type=Interpreted.IT_INSERT):
-    print(itype)
     if itype == "import":
       return "import {0}".format(statements['module'])
 
