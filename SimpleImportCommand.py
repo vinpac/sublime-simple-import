@@ -59,8 +59,7 @@ class SimpleImportCommand(sublime_plugin.TextCommand):
       if not self.isPanelMode() and not len(simport.expression.strip()):
         continue
 
-      interpreted = self.interpreter.interprete(simport)
-      self.interpreter.onInterprete(interpreted, mode=self.mode)
+      interpreted = self.interpreter.interprete(simport, mode=self.mode)
       self.interpreted_list.append(interpreted)
 
 
@@ -177,9 +176,10 @@ class SimpleImportCommand(sublime_plugin.TextCommand):
           self.view.substr(region),
           region,
           region
-        )
+        ),
+        mode=self.mode
       )
-        for region in regions
+      for region in regions
     ]
 
   def isPanelMode(self):

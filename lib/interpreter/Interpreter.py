@@ -38,7 +38,7 @@ class Interpreter:
       if callable(fn):
         interpreted.statements[key] = fn(interpreted.statements[key])
 
-  def interprete(self, sSelection):
+  def interprete(self, sSelection, mode=SimpleImport.REPLACE_MODE):
     matched_handler = None
 
     for handler in self.handlers:
@@ -52,7 +52,9 @@ class Interpreter:
 
     statements = handler.getStatements(sSelection)
 
-    return Interpreted(self, matched_handler.getStatements(sSelection), matched_handler.name, sSelection)
+    interpreted = Interpreted(self, matched_handler.getStatements(sSelection), matched_handler.name, sSelection)
+    self.onInterprete(interpreted, mode=mode)
+    return interpreted
 
   def getDefaultHandler(self):
     return self.defaultHandler if self.defaultHandler else self.handlers[0]
