@@ -2,7 +2,7 @@ import sublime, re
 from os import path
 from ..utils import joinStr
 from ..interpreter import *
-from ..SimpleImport import SimpleImport
+from ..SIMode import SIMode
 
 
 class JavascriptInterpreter(Interpreter):
@@ -127,20 +127,20 @@ class JavascriptInterpreter(Interpreter):
   def getQueryObject(self, interpreted):
     return interpreted.statements["module"]
 
-  def onSearchResultChosen(self, interpreted, option_key, value, mode=SimpleImport.REPLACE_MODE):
+  def onSearchResultChosen(self, interpreted, option_key, value, mode=SIMode.REPLACE_MODE):
     statements = interpreted.statements
-    if (mode == SimpleImport.PANEL_MODE and len(statements['variable'])) or option_key == "containing_files":
+    if (mode == SIMode.PANEL_MODE and len(statements['variable'])) or option_key == "containing_files":
       interpreted.itype = "import_from"
       statements['submodules'] = self.parseSubmodulesKey(interpreted.statements['variable'])
       del statements['variable']
-    elif mode == SimpleImport.PANEL_MODE:
+    elif mode == SIMode.PANEL_MODE:
       if option_key != "modules":
         statements['variable'] = path.basename(value)
       statements['variable'] = self.parseVariableKey(self.removeExtensions(statements['variable']))
 
     statements['module'] = self.parseModuleKey(value)
 
-  def onInterprete(self, interpreted, mode=SimpleImport.REPLACE_MODE):
+  def onInterprete(self, interpreted, mode=SIMode.REPLACE_MODE):
     statements = interpreted.statements
     if len(statements.keys()) == 0:
       values = interpreted.simport.expression.split(":")
@@ -162,7 +162,7 @@ class JavascriptInterpreter(Interpreter):
       statements["submodules"].append(statements["submodule"])
       statements.pop("submodule")
 
-    if mode != SimpleImport.REPLACE_MODE and interpreted.itype == "require" and not "require" in interpreted.simport.context:
+    if mode != SIMode.REPLACE_MODE and interpreted.itype == "require" and not "require" in interpreted.simport.context:
       if self.getSetting("es6") != False:
         statements["variable"] = statements["module"]
         interpreted.itype = "import"
@@ -206,7 +206,7 @@ class JavascriptInterpreter(Interpreter):
 
     return import_str
 
-  def parseBeforeInsert(self, interpreted, view_imports, mode=SimpleImport.REPLACE_MODE):
+  def parseBeforeInsert(self, interpreted, view_imports, mode=SIMode.REPLACE_MODE):
     if interpreted.itype.startswith('import'):
       regex = r"^{0}({1})?$".format(
         interpreted.statements['module'],
@@ -219,7 +219,7 @@ class JavascriptInterpreter(Interpreter):
           vimport.insert_type = Interpreted.IT_REPLACE_IMPORT
           return vimport
 
-    if mode == SimpleImport.PUSH_MODE or mode == SimpleImport.PANEL_MODE:
+    if mode == SIMode.PUSH_MODE or mode == SIMode.PANEL_MODE:
       if len(view_imports):
         region_point = view_imports[-1].simport.context_region.end()
         interpreted.insert_type = Interpreted.IT_INSERT_AFTER

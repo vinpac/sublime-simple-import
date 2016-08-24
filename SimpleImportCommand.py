@@ -4,16 +4,17 @@ from .lib.interpreter.SImport import SImport
 from .lib.interpreter.Interpreted import Interpreted
 from .lib.interpreter.PendingImport import PendingImport
 from .lib.SimpleImport import SimpleImport
+from .lib.SIMode import SIMode
 
 class SimpleImportCommand(sublime_plugin.TextCommand):
 
   def run(self, edit, push_mode=False, panel_mode=False):
     # modes
-    self.mode = SimpleImport.REPLACE_MODE
+    self.mode = SIMode.REPLACE_MODE
     if push_mode:
-      self.mode = SimpleImport.PUSH_MODE
+      self.mode = SIMode.PUSH_MODE
     elif panel_mode:
-      self.mode = SimpleImport.PANEL_MODE
+      self.mode = SIMode.PANEL_MODE
 
     # paths
     self.view_path = path.dirname(self.view.file_name())
@@ -183,7 +184,7 @@ class SimpleImportCommand(sublime_plugin.TextCommand):
     ]
 
   def isPanelMode(self):
-    return self.mode == SimpleImport.PANEL_MODE
+    return self.mode == SIMode.PANEL_MODE
 
   def getProjectFolder(self):
     folders = self.view.window().folders()
