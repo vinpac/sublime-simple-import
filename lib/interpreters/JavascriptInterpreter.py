@@ -23,7 +23,7 @@ class JavascriptInterpreter(Interpreter):
     self.settings = {
       "extensions": [".js", ".jsx"],
       "remove_extensions": [".js", ".jsx"],
-      "extra_extensions": [".jpg", ".svg", ".json", ".gif", ".css", ".scss", ".less"],
+      "extra_extensions": [".png", ".jpg", ".jpeg", ".svg", ".json", ".gif", ".css", ".scss", ".less"],
       "excluded_paths": ["node_modules", ".git"],
       "modules_folder": "node_modules"
     }
