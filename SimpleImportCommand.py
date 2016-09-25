@@ -34,6 +34,8 @@ class SimpleImportCommand(sublime_plugin.TextCommand):
       print("Simple import does not support '.{0}' syntax yet".format(view_syntax))
       return
 
+    self.loadSettings()
+
     selections = self.view.sel()
     self.view_imports = self.findAllImports()
     self.interpreted_list = []
@@ -192,6 +194,38 @@ class SimpleImportCommand(sublime_plugin.TextCommand):
       if self.view_path.startswith(folder):
         return folder
     return folders[0]
+
+  def getProjectSettings(self):
+    if path.isfile(path.join(self.project_path, SimpleImport.SETTINGS_FILE)):
+      with open(path.join(self.project_path, SimpleImport.SETTINGS_FILE)) as raw_json:
+        try:
+          settings_json = json.load(raw_json)
+          if "$path" in settings_json:
+            SimpleImport.log_error("Multiple paths are not supported yet")
+          else:
+            if self.interpreter.syntax in settings_json:
+              return settings_json[self.interpreter.syntax]
+            else:
+              SimpleImport.log("No settings was give for {0}".format(self.interpreter.syntax))
+        except ValueError:
+          SimpleImport.log_error("Failed to load .simple-import.json at {0}".format(self.project_path))
+
+  def loadSettings(self):
+    settings = {}
+    view_settings = self.view.settings().get("simple-import")
+    if view_settings and self.interpreter.syntax in view_settings:
+      settings.update(view_settings[self.interpreter.syntax])
+
+    project_settings = self.getProjectSettings()
+    if project_settings:
+      settings.update(project_settings)
+
+    # Copy default settings and update with new settings
+    # so settings won't stick through different evironments
+    obj = self.interpreter.default_settings.copy()
+    obj.update(settings)
+
+    self.interpreter.settings = obj
 
 class ReplaceCommand(sublime_plugin.TextCommand):
   def run(self, edit, characters, start=0, end=False):

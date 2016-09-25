@@ -15,12 +15,13 @@ class PythonInterpreter(Interpreter):
     }
 
     self.syntax = "python"
-    self.settings = {
+    self.default_settings = {
       "extensions": [".py"],
       "remove_extensions": [".py"],
       "extra_extensions": [],
       "modules_folder": None
     }
+    self.settings = self.default_settings.copy()
 
     self.handlers = [
       Handler(

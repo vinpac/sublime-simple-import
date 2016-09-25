@@ -9,8 +9,9 @@ class PendingImport:
 
   def __init__(self, interpreted, options):
     self.interpreted = interpreted
-    self.options = options
+    self.options = self.interpreted.interpreter.parseOptions(interpreted, options)
     self.resolved = False
+
 
   def getOptionsArr(self, include_keys=False):
     arr = []
@@ -19,6 +20,7 @@ class PendingImport:
         arr += [ "{key}: {value}".format(key=PendingImport.key_str[key], value=option) for option in self.options[key] ]
       else:
         arr += self.options[key]
+
     return arr
 
   def getOptionByIndex(self, index):

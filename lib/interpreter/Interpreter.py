@@ -25,7 +25,8 @@ class Interpreter:
     self.handlers = handlers
     self.keys = keys
     self.defaultHandler = defaultHandler
-    self.settings = settings
+    self.default_settings = settings
+    self.settings = self.default_settings.copy()
     self.find_imports_regex = None
     self.find_exports_regex = None
 
@@ -97,11 +98,8 @@ class Interpreter:
       if not extension:
         return False
 
-      return re.search(
-        regex,
-        self.normalizeValue(path.join(dirpath, filename[:len(extension) * -1])) + extension,
-        re.IGNORECASE
-      )
+      normalizedValued = self.normalizeValue(path.join(dirpath, filename[:len(extension) * -1]))
+      return re.search(regex, "{0}{1}".format(normalizedValued, extension), re.IGNORECASE)
     return re.search(regex, filename, re.IGNORECASE)
 
   def setDefaultHandler(self, handlerName):
@@ -110,3 +108,4 @@ class Interpreter:
         self.defaultHandler = handler
         self.defaultHandlerName = handler.name
         return
+

@@ -20,13 +20,14 @@ class JavascriptInterpreter(Interpreter):
     }
 
     self.syntax = "javascript"
-    self.settings = {
+    self.default_settings = {
       "extensions": [".js", ".jsx"],
       "remove_extensions": [".js", ".jsx"],
       "extra_extensions": [".png", ".jpg", ".jpeg", ".svg", ".json", ".gif", ".css", ".scss", ".less"],
       "excluded_paths": ["node_modules", ".git"],
       "modules_folder": "node_modules"
     }
+    self.settings = self.default_settings.copy()
 
     self.handlers = [
       Handler(
@@ -228,3 +229,20 @@ class JavascriptInterpreter(Interpreter):
         interpreted.insert_type = Interpreted.IT_INSERT
 
     return interpreted
+
+  def getDictionary(self):
+    obj = {}
+    dictionary = self.settings['dictionary']
+    if dictionary:
+      for key in obj:
+        obj = { "variable": key, "module": obj[key] }
+    return obj
+
+  def parseOptions(self, interpreted, options):
+    if 'dictionary' in self.settings:
+      for key in self.settings['dictionary']:
+        if interpreted.simport.expression == key:
+          options['files'].append(self.settings['dictionary'][key])
+    return options
+
+

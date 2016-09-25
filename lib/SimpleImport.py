@@ -5,6 +5,7 @@ from .interpreters import *
 from .interpreters import __all__ as InterpretersNames
 
 class SimpleImport:
+  SETTINGS_FILE = ".simple-import.json"
   interpreters = {}
 
   @staticmethod
@@ -13,6 +14,14 @@ class SimpleImport:
     for name in  InterpretersNames:
       _object = globals()[name]()
       SimpleImport.interpreters[_object.syntax] = _object
+
+  @staticmethod
+  def log_error(message):
+    print("Simple Import Error -> {0}".format(message))
+
+  @staticmethod
+  def log(message):
+    print("Simple Import -> {0}".format(message))
 
   def getInterpreter(syntax, view_filename):
     for key in SimpleImport.interpreters:
