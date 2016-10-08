@@ -21,6 +21,7 @@ class SimpleImportCommand(sublime_plugin.TextCommand):
     self.project_path = self.getProjectFolder()
     self.view_dir_relpath = path.relpath(self.view_path, self.project_path)
     self.view_filename = path.basename(self.view.file_name())
+    self.view_relpath = path.join(self.view_dir_relpath, self.view_filename)
     view_syntax = path.basename(self.view.settings().get('syntax')).lower()
 
     self.interpreter = SimpleImport.getInterpreter(
@@ -89,7 +90,7 @@ class SimpleImportCommand(sublime_plugin.TextCommand):
               query,
               self.interpreter,
               self.project_path,
-              exclude=path.join(path.join(self.view_dir_relpath, self.view_filename))
+              exclude=path.join(self.view_relpath)
             )
           )
 
@@ -200,12 +201,21 @@ class SimpleImportCommand(sublime_plugin.TextCommand):
       with open(path.join(self.project_path, SimpleImport.SETTINGS_FILE)) as raw_json:
         try:
           settings_json = json.load(raw_json)
-          if "$path" in settings_json:
-            SimpleImport.log_error("Multiple paths are not supported yet")
-          else:
-            if self.interpreter.syntax in settings_json:
-              return settings_json[self.interpreter.syntax]
+          if self.interpreter.syntax in settings_json:
+            settings = settings_json[self.interpreter.syntax]
+            if "$path" in settings:
+              settings_on_file = {}
+              for match in settings["$path"]:
+                if len(match) == 1:
+                  settings_on_file.update(match[0])
+                else:
+                  pattern = '|'.join(match[:-1])
+                  if re.search("^{0}".format(pattern), self.view_relpath):
+                    settings_on_file.update(match[-1])
+              return settings_on_file
             else:
+              return settings_json[self.interpreter.syntax]
+          else:
               SimpleImport.log("No settings was give for {0}".format(self.interpreter.syntax))
         except ValueError:
           SimpleImport.log_error("Failed to load .simple-import.json at {0}".format(self.project_path))

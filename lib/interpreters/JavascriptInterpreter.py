@@ -164,9 +164,14 @@ class JavascriptInterpreter(Interpreter):
       statements.pop("submodule")
 
     if mode != SIMode.REPLACE_MODE and interpreted.itype == "require" and not "require" in interpreted.simport.context:
-      if self.getSetting("es6") != False:
-        statements["variable"] = statements["module"]
-        interpreted.itype = "import"
+      statements["variable"] = statements["module"]
+      interpreted.itype = "import"
+
+    if self.getSetting("es5") or self.getSetting("require_by_default"):
+      if interpreted.itype == "import_from":
+        interpreted.itype = "require_from"
+      else:
+        interpreted.itype = "require"
 
     return super().onInterprete(interpreted)
 
@@ -175,12 +180,15 @@ class JavascriptInterpreter(Interpreter):
 
     if itype.startswith('require'):
       if 'variable' in statements:
-        import_str = 'const '
+        import_str += 'const ' if not self.getSetting("es5") else 'var '
         import_str += statements['variable']
         import_str += ' = '
 
       if 'module':
         import_str += "require('{0}')".format(statements['module'])
+
+      if self.getSetting("es5"):
+        import_str += ';'
 
     else:
       import_str = 'import '
