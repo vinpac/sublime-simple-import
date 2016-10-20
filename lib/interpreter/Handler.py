@@ -1,6 +1,17 @@
 import re
 
 class Handler:
+  @staticmethod
+  def joinStatements(s1, s2):
+    for key in s2:
+      if not key in s1:
+        s1[key] = s2[key]
+        pass
+
+      if type(s1[key]) is list:
+        s1[key] = s1[key] + list(set(s2[key]) - set(s1[key]))
+      else:
+        s1[key] = s2[key]
 
   @staticmethod
   def createMatchers(matchers, keys):

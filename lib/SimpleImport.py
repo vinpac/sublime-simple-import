@@ -3,6 +3,7 @@ from .utils import endswith
 from os import walk, path
 from .interpreters import *
 from .interpreters import __all__ as InterpretersNames
+from .utils import endswith
 
 class SimpleImport:
   SETTINGS_FILE = ".simple-import.json"
@@ -23,9 +24,9 @@ class SimpleImport:
   def log(message):
     print("Simple Import -> {0}".format(message))
 
-  def getInterpreter(syntax, view_filename):
+  def getInterpreter(view_syntax, view_filename):
     for key in SimpleImport.interpreters:
-      if re.search(r"^\.?{0}".format(key), syntax, re.IGNORECASE):
+      if SimpleImport.interpreters[key].isCompatibleView(view_filename, view_syntax):
         return SimpleImport.interpreters[key]
     return None
 

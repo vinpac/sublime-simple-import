@@ -6,6 +6,7 @@
 		"test/test.py",
 		"lib/utils.py",
 		"lib/interpreters/__init__.py",
+		"lib/interpreters/ScssInterpreter.py",
 		"lib/interpreters/PythonInterpreter.py",
 		"lib/interpreters/JavascriptInterpreter.py",
 		"lib/interpreter/__init__.py",

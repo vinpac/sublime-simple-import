@@ -5,7 +5,7 @@ from ..SIMode import SIMode
 
 class PythonInterpreter(Interpreter):
 
-  def __init__(self):
+  def run(self):
     self.find_imports_regex = None
     self.find_exports_regex = None
 
@@ -14,7 +14,6 @@ class PythonInterpreter(Interpreter):
       "variable": "[^\s]+"
     }
 
-    self.syntax = "python"
     self.default_settings = {
       "extensions": [".py"],
       "remove_extensions": [".py"],
@@ -49,7 +48,7 @@ class PythonInterpreter(Interpreter):
       )
     ]
 
-    self.setDefaultHandler("import")
+    self.defaultHandler = "import_from"
 
   def parseModuleKey(self, value):
     for ext in self.getSetting('remove_extensions'):
@@ -71,9 +70,9 @@ class PythonInterpreter(Interpreter):
 
     if not len(statements.keys()):
       statements['module'] = interpreted.simport.expression
-    else:
-      if "variable" not in statements:
-        statements["variable"] = statements["module"]
+
+    if "variable" not in statements:
+      statements["variable"] = statements["module"]
 
     return super().onInterprete(interpreted)
 

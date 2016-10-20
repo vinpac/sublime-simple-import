@@ -32,7 +32,7 @@ class SimpleImportCommand(sublime_plugin.TextCommand):
     )
 
     if not self.interpreter:
-      print("Simple import does not support '.{0}' syntax yet".format(view_syntax))
+      SimpleImport.log_error("Simple import does not support '.{0}' syntax yet".format(view_syntax))
       return
 
     self.loadSettings()
@@ -232,7 +232,7 @@ class SimpleImportCommand(sublime_plugin.TextCommand):
 
     # Copy default settings and update with new settings
     # so settings won't stick through different evironments
-    obj = self.interpreter.default_settings.copy()
+    obj = self.interpreter.settings.copy()
     obj.update(settings)
 
     self.interpreter.settings = obj

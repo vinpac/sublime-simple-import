@@ -7,7 +7,7 @@ from ..SIMode import SIMode
 
 class JavascriptInterpreter(Interpreter):
 
-  def __init__(self):
+  def run(self):
 
     self.find_imports_regex = r"(import[\s\n]+((?:(?!from|;)[\s\S])*)[\s\n]+from[\s]+[\"\']([^\"\']+)[\"\'])"
     self.find_exports_regex = r"(export\s+(const|let|var|function|class)\s+(?P<value>[\w]+))"
@@ -19,15 +19,13 @@ class JavascriptInterpreter(Interpreter):
       "submodules": "((?:(?!from)[\s\S])*)"
     }
 
-    self.syntax = "javascript"
-    self.default_settings = {
+    self.settings = {
       "extensions": [".js", ".jsx"],
       "remove_extensions": [".js", ".jsx"],
       "extra_extensions": [".png", ".jpg", ".jpeg", ".svg", ".json", ".gif", ".css", ".scss", ".less"],
       "excluded_paths": ["node_modules", ".git"],
       "modules_folder": "node_modules"
     }
-    self.settings = self.default_settings.copy()
 
     self.handlers = [
       Handler(
@@ -92,7 +90,7 @@ class JavascriptInterpreter(Interpreter):
       )
     ]
 
-    self.setDefaultHandler("import")
+    self.defaultHandler = "import"
 
   def removeExtensions(self, value):
     extensions = self.getSetting('extensions', []) + self.getSetting('extra_extensions', [])
