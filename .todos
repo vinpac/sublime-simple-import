@@ -1,5 +1,0 @@
-- Add line breaking on importing too many submodules on Javascript
-    Ex.:
-      import {
-        Component
-      } from 'react'
