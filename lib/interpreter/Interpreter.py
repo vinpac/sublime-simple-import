@@ -5,7 +5,6 @@ from .Interpreted import Interpreted
 from ..utils import endswith
 from ..utils import extract_suffix
 from ..SIMode import SIMode
-from ..SimpleImport import SimpleImport
 
 class Interpreter:
 
@@ -45,7 +44,7 @@ class Interpreter:
     self.__settings = self.settings.copy()
 
     if not self.syntax:
-      SimpleImport.log_error("Missing syntax on {0}".format(type(self).__name__))
+      print("Simple Import Error -> {0}".format(message))
 
   def parseModuleKey(self, value):
     #remove extensions
