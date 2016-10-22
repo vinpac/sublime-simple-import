@@ -1,5 +1,5 @@
-Simple Import v2.0.0-alpha
-==========================
+Simple Import v2.0.0
+====================
 
 [![Join the chat at https://gitter.im/sublime-simple-import/Lobby](https://badges.gitter.im/sublime-simple-import/Lobby.svg)](https://gitter.im/sublime-simple-import/Lobby?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
 
