@@ -158,8 +158,8 @@ class SimpleImportCommand(sublime_plugin.TextCommand):
     else:
       self.view.run_command("replace", {
         "characters": interpreted.__str__(),
-        "start": interpreted.simport.context_region.begin(),
-        "end": interpreted.simport.context_region.end()
+        "start": interpreted.simport.region.begin(),
+        "end": interpreted.simport.region.end()
       })
 
   def parsePath(self, path):
@@ -235,7 +235,7 @@ class SimpleImportCommand(sublime_plugin.TextCommand):
     obj = self.interpreter.settings.copy()
     obj.update(settings)
 
-    self.interpreter.settings = obj
+    self.interpreter.setSettings(obj)
 
 class ReplaceCommand(sublime_plugin.TextCommand):
   def run(self, edit, characters, start=0, end=False):

@@ -28,13 +28,13 @@ class Handler:
     self.matchers = self.createMatchers(matchers, keys)
     self.force = force
 
-  def match(self, sSelection):
+  def match(self, simport):
     for matcher in self.matchers:
-      match = re.search(matcher, sSelection.context)
+      match = re.search(matcher, simport.context)
       if match:
         return match
 
-  def getStatements(self, sSelection):
-    match = self.match(sSelection)
+  def getStatements(self, simport):
+    match = self.match(simport)
 
     return match.groupdict() if match else {}

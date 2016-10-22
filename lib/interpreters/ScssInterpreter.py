@@ -2,6 +2,7 @@ import re
 from os import path
 from ..interpreter import *
 from ..SIMode import SIMode
+from ..utils import endswith
 
 class ScssInterpreter(Interpreter):
   def run(self):
@@ -22,7 +23,16 @@ class ScssInterpreter(Interpreter):
 
     return super().parseModuleKey(value)
 
-  def stringifyStatements(self, statements, itype=None, insert_type=Interpreted.IT_REPLACE):
+  def onSearchResultChosen(self, interpreted, option_key, value, mode=SIMode.REPLACE_MODE):
+    if option_key == "extra_files":
+      interpreted.handler_name = "file"
+
+    super().onSearchResultChosen(interpreted, option_key, value, mode)
+
+  def stringifyStatements(self, statements, handler_name=None, insert_type=Interpreted.IT_REPLACE):
+    if handler_name == "file":
+      return "url({0})".format(statements["module"])
+
     return "@import \"{0}\";".format(statements["module"])
 
   def getQueryObject(self, interpreted):

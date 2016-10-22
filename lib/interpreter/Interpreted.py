@@ -5,12 +5,12 @@ class Interpreted:
   IT_REPLACE = "REPLACE"
   IT_REPLACE_IMPORT = "REPLACE_IMPORT"
 
-  def __init__(self, interpreter, statements, itype, simport):
+  def __init__(self, interpreter, statements, handler_name, simport):
     self.interpreter = interpreter
     self.simport = simport
-    self.itype = itype
+    self.handler_name = handler_name
     self.statements = statements
     self.insert_type = Interpreted.IT_REPLACE
 
   def __str__(self):
-    return self.interpreter.stringifyStatements(self.statements, itype=self.itype, insert_type=self.insert_type)
+    return self.interpreter.stringifyStatements(self.statements, handler_name=self.handler_name, insert_type=self.insert_type)

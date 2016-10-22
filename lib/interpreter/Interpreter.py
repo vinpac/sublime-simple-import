@@ -1,4 +1,5 @@
 import re
+from sublime import Region
 from os import path
 from ..utils import joinStr, ucfirst
 from .Interpreted import Interpreted
@@ -63,33 +64,32 @@ class Interpreter:
   def getSetting(self, key, otherwise=None):
     return self.__settings[key] if key in self.__settings else otherwise
 
+  def setSettings(self, settings):
+    self.__settings = settings
+
   def onInterprete(self, interpreted, mode=SIMode.REPLACE_MODE):
     if not len(interpreted.statements.keys()):
       interpreted.statements['module'] = interpreted.simport.expression
 
     self.parseStatements(interpreted.statements)
 
-  def getHandlerBySelection(self, sSelection):
+  def getHandlerBySelection(self, simport):
     handler = None
 
     for n_handler in self.handlers:
-      match = n_handler.match(sSelection)
-
+      match = n_handler.match(simport)
       if match:
-        handler = n_handler
-        break
+        simport.region = Region(simport.context_region.end() - len(match.group(0)), simport.context_region.end())
+        return n_handler
 
-    if not handler:
-      handler = self.getDefaultHandler()
+    return self.getDefaultHandler()
 
-    return handler
-
-  def interprete(self, sSelection, mode=SIMode.REPLACE_MODE):
-    handler = self.getHandlerBySelection(sSelection)
+  def interprete(self, simport, mode=SIMode.REPLACE_MODE):
+    handler = self.getHandlerBySelection(simport)
     if handler:
-      interpreted = Interpreted(self, handler.getStatements(sSelection), handler.name, sSelection)
+      interpreted = Interpreted(self, handler.getStatements(simport), handler.name, simport)
     else:
-      interpreted = Interpreted(self, {}, None, sSelection)
+      interpreted = Interpreted(self, {}, None, simport)
 
     # fire onInterprete
     self.onInterprete(interpreted, mode)

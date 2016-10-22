@@ -82,8 +82,8 @@ class PythonInterpreter(Interpreter):
 
     interpreted.statements['module'] = self.parseModuleKey(value)
 
-  def stringifyStatements(self, statements, itype=None, insert_type=Interpreted.IT_INSERT):
-    if itype == "import":
+  def stringifyStatements(self, statements, handler_name=None, insert_type=Interpreted.IT_INSERT):
+    if handler_name == "import":
       return "import {0}".format(statements['module'])
 
     return "from {0} import {1}".format(statements['module'], statements['variable'])

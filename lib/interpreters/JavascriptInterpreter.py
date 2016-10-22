@@ -4,7 +4,6 @@ from ..utils import joinStr
 from ..interpreter import *
 from ..SIMode import SIMode
 
-
 class JavascriptInterpreter(Interpreter):
 
   def run(self):
@@ -24,7 +23,8 @@ class JavascriptInterpreter(Interpreter):
       "remove_extensions": [".js", ".jsx"],
       "extra_extensions": [".png", ".jpg", ".jpeg", ".svg", ".json", ".gif", ".css", ".scss", ".less"],
       "excluded_paths": ["node_modules", ".git"],
-      "modules_folder": "node_modules"
+      "modules_folder": "node_modules",
+      "add_semicolon": False
     }
 
     self.handlers = [
@@ -73,18 +73,18 @@ class JavascriptInterpreter(Interpreter):
         keys=keys
       ),
       Handler(
+        name="require_plain",
+        matchers=[
+          "req {variable}"
+        ],
+        keys=keys
+      ),
+      Handler(
         name="require",
         matchers=[
           "require {variable}",
           "(const|let|var) {variable} = {module}",
           "(const|let|var) {variable}"
-        ],
-        keys=keys
-      ),
-      Handler(
-        name="require_plain",
-        matchers=[
-          "req {variable}"
         ],
         keys=keys
       )
@@ -129,7 +129,7 @@ class JavascriptInterpreter(Interpreter):
   def onSearchResultChosen(self, interpreted, option_key, value, mode=SIMode.REPLACE_MODE):
     statements = interpreted.statements
     if (mode == SIMode.PANEL_MODE and len(statements['variable'])) or option_key == "containing_files":
-      interpreted.itype = "import_from"
+      interpreted.handler_name = "import_from"
       statements['submodules'] = self.parseSubmodulesKey(interpreted.statements['variable'])
       del statements['variable']
     elif mode == SIMode.PANEL_MODE:
@@ -161,23 +161,23 @@ class JavascriptInterpreter(Interpreter):
       statements["submodules"].append(statements["submodule"])
       statements.pop("submodule")
 
-    if mode != SIMode.REPLACE_MODE and interpreted.itype == "require" and not "require" in interpreted.simport.context:
+    if mode != SIMode.REPLACE_MODE and interpreted.handler_name == "require" and not "require" in interpreted.simport.context:
       statements["variable"] = statements["module"]
-      interpreted.itype = "import"
+      interpreted.handler_name = "import"
 
     if self.getSetting("es5") or self.getSetting("require_by_default"):
-      if interpreted.itype == "import_from":
-        interpreted.itype = "require_from"
+      if interpreted.handler_name == "import_from":
+        interpreted.handler_name = "require_from"
       else:
-        interpreted.itype = "require"
+        interpreted.handler_name = "require"
 
     return super().onInterprete(interpreted)
 
-  def stringifyStatements(self, statements, itype=None, insert_type=Interpreted.IT_REPLACE):
+  def stringifyStatements(self, statements, handler_name=None, insert_type=Interpreted.IT_REPLACE):
     import_str = ''
 
-    if itype.startswith('require'):
-      if 'variable' in statements:
+    if handler_name.startswith('require'):
+      if 'variable' in statements and handler_name != 'require_plain':
         import_str += 'const ' if not self.getSetting("es5") else 'var '
         import_str += statements['variable']
         import_str += ' = '
@@ -185,13 +185,13 @@ class JavascriptInterpreter(Interpreter):
       if 'module':
         import_str += "require('{0}')".format(statements['module'])
 
-      if self.getSetting("es5"):
+      if self.getSetting("es5") or self.getSetting("add_semicolon"):
         import_str += ';'
 
     else:
       import_str = 'import '
-      if itype != "import_pure":
-        if itype == "import_all_from":
+      if handler_name != "import_pure":
+        if handler_name == "import_all_from":
           import_str += "* as "
 
         if 'variable' in statements:
@@ -204,6 +204,9 @@ class JavascriptInterpreter(Interpreter):
 
         import_str += " from "
 
+        if self.getSetting("add_semicolon"):
+          import_str += ';'
+
       import_str += "\'{0}\'".format(statements['module'])
 
     if insert_type == Interpreted.IT_INSERT_AFTER:
@@ -214,7 +217,7 @@ class JavascriptInterpreter(Interpreter):
     return import_str
 
   def parseBeforeInsert(self, interpreted, view_imports, mode=SIMode.REPLACE_MODE):
-    if interpreted.itype.startswith('import'):
+    if interpreted.handler_name.startswith('import'):
       regex = r"^{0}({1})?$".format(
         interpreted.statements['module'],
         "|".join(self.getSetting('remove_extensions'))
@@ -222,7 +225,7 @@ class JavascriptInterpreter(Interpreter):
 
       for vimport in view_imports:
         if re.search(regex, vimport.statements['module']):
-          Interpreter.joinStatements(vimport.statements, interpreted.statements)
+          Handler.joinStatements(vimport.statements, interpreted.statements)
           vimport.insert_type = Interpreted.IT_REPLACE_IMPORT
           return vimport
 
