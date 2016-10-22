@@ -51,21 +51,31 @@ Settings
 ## Javascript
 
 **extensions**  (Array) : Extensions to match. Default: `[".js", ".jsx"]`
+
 **remove_extensions**  (Array) : Remove extensions from path. Default: `[".js"]`
+
 **extra_extensions**  (Array) : Extensions to match, but SI will not look into these files for submodules. Default: `[".png", ".jpg", ".jpeg", ".svg", ".json", ".gif", ".css", ".scss", ".less"]`
+
 **ignore**  (Array) : Paths to be ignored when crawling for modules.
+
 **require_by_default**  (Boolean) : Prefer `require` than `import`. Default: `False`
+
 **add_semicolon**  (Boolean) : Add `;` at the end of the import. Default: `True`
+
 **es5**  (Boolean) : Will force `require_by_default`, `add_semicolon` and will use `var` instead of `const`. Default: False
 
 ## SCSS
 
 **extensions**  (Array) : Extensions to match. Default: `[".scss"]`
+
 **extra_extensions**  (Array) : Extensions of files to match and import as `url(<path>)`. Default: `[".jpg", ".png", ".gif", ".svg"]`
+
 **ignore**  (Array) : Paths to be ignored when crawling for modules.
 
 ## Python
 
 **extensions**  (Array) : Extensions to match. Default: `[".py"]`
+
 **remove_extensions**  (Array) : Remove extensions from path. Default: `[".py"]`
+
 **ignore**  (Array) : Paths to be ignored when crawling for modules.
