@@ -215,8 +215,6 @@ class SimpleImportCommand(sublime_plugin.TextCommand):
               return settings_on_file
             else:
               return settings_json[self.interpreter.syntax]
-          else:
-              SimpleImport.log("No settings was give for {0}".format(self.interpreter.syntax))
         except ValueError:
           SimpleImport.log_error("Failed to load .simple-import.json at {0}".format(self.project_path))
 
