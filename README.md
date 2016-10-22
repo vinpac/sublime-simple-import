@@ -48,7 +48,7 @@ You can find this plugin in Packages Control by the name of "Simple Import". You
 Settings
 --------
 
-## Javascript
+### Javascript
 
 **extensions**  (Array) : Extensions to match. Default: `[".js", ".jsx"]`
 
@@ -64,7 +64,7 @@ Settings
 
 **es5**  (Boolean) : Will force `require_by_default`, `add_semicolon` and will use `var` instead of `const`. Default: False
 
-## SCSS
+### SCSS
 
 **extensions**  (Array) : Extensions to match. Default: `[".scss"]`
 
@@ -72,7 +72,7 @@ Settings
 
 **ignore**  (Array) : Paths to be ignored when crawling for modules.
 
-## Python
+### Python
 
 **extensions**  (Array) : Extensions to match. Default: `[".py"]`
 
