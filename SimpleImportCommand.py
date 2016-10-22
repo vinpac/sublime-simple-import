@@ -173,6 +173,7 @@ class SimpleImportCommand(sublime_plugin.TextCommand):
       return []
 
     regions = self.view.find_all(self.interpreter.find_imports_regex)
+
     return [
       self.interpreter.interprete(
         SImport(

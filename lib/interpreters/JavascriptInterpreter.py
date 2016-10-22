@@ -1,4 +1,5 @@
-import sublime, re
+import re
+from sublime import Region
 from os import path
 from ..utils import joinStr
 from ..interpreter import *
@@ -8,7 +9,7 @@ class JavascriptInterpreter(Interpreter):
 
   def run(self):
 
-    self.find_imports_regex = r"(import[\s\n]+((?:(?!from|;)[\s\S])*)[\s\n]+from[\s]+[\"\']([^\"\']+)[\"\'])"
+    self.find_imports_regex = r"(import[\s\n]+((?:(?!from|;)[\s\S])*)[\s\n]+from[\s]+[\"\']([^\"\']+)[\"\'](;?))"
     self.find_exports_regex = r"(export\s+(const|let|var|function|class)\s+(?P<value>[\w]+))"
 
     keys = {
@@ -31,7 +32,7 @@ class JavascriptInterpreter(Interpreter):
       Handler(
         name="import_all_from",
         matchers=[
-          "import \* as {variable} from {module}",
+          "import \* as {variable} from {module};?",
           "{variable}\.\*"
         ],
         keys=keys,
@@ -47,8 +48,8 @@ class JavascriptInterpreter(Interpreter):
       Handler(
         name="import_from",
         matchers=[
-          "import {{submodules}} from [\'\"]{module}[\'\"]",
-          "import {variable}, {{submodules}} from [\'\"]{module}[\'\"]",
+          "import {{submodules}} from [\'\"]{module}[\'\"];?",
+          "import {variable}, {{submodules}} from [\'\"]{module}[\'\"];?",
           "{submodule}::{module}"
         ],
         keys=keys
@@ -56,7 +57,7 @@ class JavascriptInterpreter(Interpreter):
       Handler(
         name="import",
         matchers=[
-          "import {variable} from [\'\"]{module}[\'\"]",
+          "import {variable} from [\'\"]{module}[\'\"];?",
           "{variable}\.[^\s]+",
           "import {variable}",
           "(?P<module>[^\s\.]+)(\.[^\s]+){2,}"
@@ -204,10 +205,10 @@ class JavascriptInterpreter(Interpreter):
 
         import_str += " from "
 
-        if self.getSetting("add_semicolon"):
-          import_str += ';'
-
       import_str += "\'{0}\'".format(statements['module'])
+
+      if self.getSetting("add_semicolon"):
+          import_str += ';'
 
     if insert_type == Interpreted.IT_INSERT_AFTER:
       import_str = "\n" + import_str
@@ -233,7 +234,7 @@ class JavascriptInterpreter(Interpreter):
       if len(view_imports):
         region_point = view_imports[-1].simport.context_region.end()
         interpreted.insert_type = Interpreted.IT_INSERT_AFTER
-        interpreted.simport.context_region = sublime.Region(region_point, region_point)
+        interpreted.simport.region = Region(region_point, region_point)
       else:
         interpreted.insert_type = Interpreted.IT_INSERT
 
