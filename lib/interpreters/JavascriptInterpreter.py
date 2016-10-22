@@ -21,11 +21,12 @@ class JavascriptInterpreter(Interpreter):
 
     self.settings = {
       "extensions": [".js", ".jsx"],
-      "remove_extensions": [".js", ".jsx"],
+      "remove_extensions": [".js"],
       "extra_extensions": [".png", ".jpg", ".jpeg", ".svg", ".json", ".gif", ".css", ".scss", ".less"],
-      "excluded_paths": ["node_modules", ".git"],
+      "ignore": ["node_modules", ".git"],
       "modules_folder": "node_modules",
-      "add_semicolon": False
+      "require_by_default": False,
+      "add_semicolon": True
     }
 
     self.handlers = [

@@ -6,21 +6,17 @@ from ..SIMode import SIMode
 class PythonInterpreter(Interpreter):
 
   def run(self):
-    self.find_imports_regex = None
-    self.find_exports_regex = None
-
     keys = {
       "module": "[^\s]+",
       "variable": "[^\s]+"
     }
 
-    self.default_settings = {
+    self.settings = {
       "extensions": [".py"],
       "remove_extensions": [".py"],
       "extra_extensions": [],
       "modules_folder": None
     }
-    self.settings = self.default_settings.copy()
 
     self.handlers = [
       Handler(

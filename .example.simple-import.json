@@ -1,1 +1,10 @@
-// in construction
+{
+  "javascript": {
+    "$path": [
+      [ "server", {
+        "require_by_default": true
+
+      }]
+    ]
+  }
+}

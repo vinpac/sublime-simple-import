@@ -9,8 +9,8 @@ class ScssInterpreter(Interpreter):
     self.settings = {
       "extensions": [".scss"],
       "remove_extensions": [".scss"],
-      "extra_extensions": [ ".jpg", ".png", ".gif", ".svg" ],
-      "excluded_paths": [ "node_modules", ".git" ]
+      "extra_extensions": [".jpg", ".png", ".gif", ".svg"],
+      "ignore": [ "node_modules", ".git" ]
     }
 
   def parseModuleKey(self, value):

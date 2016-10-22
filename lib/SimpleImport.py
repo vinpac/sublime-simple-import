@@ -34,11 +34,11 @@ class SimpleImport:
   def findAll(interpreter, project_path, include_extras=False):
     files = []
     extra_files = []
-    excluded_paths = [ path.normpath(epath) for epath in interpreter.getSetting("excluded_paths", []) ]
+    ignored_paths = [ path.normpath(epath) for epath in interpreter.getSetting("ignore", []) ]
 
     for dirpath, dirnames, filenames in walk(project_path, topdown=True):
       relative_dir = path.relpath(dirpath, project_path)
-      dirnames[:] = [dirname for dirname in dirnames if path.normpath(path.join(relative_dir, dirname)) not in excluded_paths]
+      dirnames[:] = [dirname for dirname in dirnames if path.normpath(path.join(relative_dir, dirname)) not in ignored_paths]
       for filename in filenames:
         if interpreter.isValidFile(filename):
           files.append(path.join(relative_dir, filename))
@@ -86,7 +86,7 @@ class SimpleImport:
   def findByValue(interpreter, project_path, filename_query=None, containing_query=None, exclude_file=None):
     regex = interpreter.getFileMatcher(filename_query)
     regex_extra_files = interpreter.getExtraFilesMatcher(filename_query)
-    excluded_paths = [ path.normpath(epath) for epath in interpreter.getSetting("excluded_paths", ['.git']) ]
+    ignored_paths = [ path.normpath(epath) for epath in interpreter.getSetting("ignore", []) ]
     result = {
       "files": [],
       "containing_files": [],
@@ -96,7 +96,7 @@ class SimpleImport:
     for dirpath, dirnames, filenames in walk(project_path, topdown=True):
       relative_dir = path.relpath(dirpath, project_path)
       # Change excluding folders
-      dirnames[:] = [dirname for dirname in dirnames if path.normpath(path.join(relative_dir, dirname)) not in excluded_paths]
+      dirnames[:] = [dirname for dirname in dirnames if path.normpath(path.join(relative_dir, dirname)) not in ignored_paths]
       for filename in filenames:
         if exclude_file == path.join(relative_dir, filename):
           continue

@@ -7,9 +7,9 @@ Simple Import v2.0.0-alpha
 
 ![example gif](https://raw.githubusercontent.com/vinpac/sublime-simple-import/master/assets/example.gif)
 
-( This is an 1.x.x GIF. 2.x.x brings new features such as submoduling by searching into files for exports and support to multiple sintaxes )
 
 ## Examples
+Note: These examples are Javascript-only. Simple Import works with Scss and Python too at the moment.
 
 visibilityActions.js
 ```
@@ -43,3 +43,29 @@ You can find this plugin in Packages Control by the name of "Simple Import". You
  - Clone this repository in this folder
 	 - On Terminal, clone this repository: `git clone https://github.com/vinpac/sublime-simple-import.git`
 	 - or Download this repository as `rar` and put the content inside the packages folder
+
+
+Settings
+--------
+
+## Javascript
+
+**extensions**  (Array) : Extensions to match. Default: `[".js", ".jsx"]`
+**remove_extensions**  (Array) : Remove extensions from path. Default: `[".js"]`
+**extra_extensions**  (Array) : Extensions to match, but SI will not look into these files for submodules. Default: `[".png", ".jpg", ".jpeg", ".svg", ".json", ".gif", ".css", ".scss", ".less"]`
+**ignore**  (Array) : Paths to be ignored when crawling for modules.
+**require_by_default**  (Boolean) : Prefer `require` than `import`. Default: `False`
+**add_semicolon**  (Boolean) : Add `;` at the end of the import. Default: `True`
+**es5**  (Boolean) : Will force `require_by_default`, `add_semicolon` and will use `var` instead of `const`. Default: False
+
+## SCSS
+
+**extensions**  (Array) : Extensions to match. Default: `[".scss"]`
+**extra_extensions**  (Array) : Extensions of files to match and import as `url(<path>)`. Default: `[".jpg", ".png", ".gif", ".svg"]`
+**ignore**  (Array) : Paths to be ignored when crawling for modules.
+
+## Python
+
+**extensions**  (Array) : Extensions to match. Default: `[".py"]`
+**remove_extensions**  (Array) : Remove extensions from path. Default: `[".py"]`
+**ignore**  (Array) : Paths to be ignored when crawling for modules.
