@@ -59,7 +59,7 @@ class JavascriptInterpreter(Interpreter):
         name="import",
         matchers=[
           "import {variable} from [\'\"]{module}[\'\"];?",
-          "{variable}\.[^\s]+",
+          "{variable}\.[^\s]+$",
           "import {variable}",
           "(?P<module>[^\s\.]+)(\.[^\s]+){2,}"
         ],
@@ -70,7 +70,7 @@ class JavascriptInterpreter(Interpreter):
         matchers=[
           "require {module}\.{submodule}",
           "{submodule}::{module}",
-          "{module}\.{submodule}"
+          "{module}\.{submodule}$"
         ],
         keys=keys
       ),

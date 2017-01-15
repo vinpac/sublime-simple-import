@@ -75,7 +75,6 @@ class Interpreter:
 
   def getHandlerBySelection(self, simport):
     handler = None
-
     for n_handler in self.handlers:
       match = n_handler.match(simport)
       if match:
