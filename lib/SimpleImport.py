@@ -49,30 +49,15 @@ class SimpleImport:
     return {
       "files": files,
       "extra_files": extra_files,
-      "modules": SimpleImport.findAllModules(interpreter, project_path)
+      "modules": interpreter.findAllModules(project_path)
     }
-
-  @staticmethod
-  def findAllModules(interpreter, project_path):
-    if not interpreter.getSetting('modules_folder'):
-      return []
-
-    modules_path = path.join(project_path, interpreter.getSetting('modules_folder'))
-    modules_path_len = len(modules_path)
-    modules = []
-
-    for dirpath, dirnames, filenames in walk(modules_path, topdown=True):
-      relative_path = dirpath[modules_path_len:] if dirpath != project_path else ""
-      modules = [ module for module in dirnames if not module[0] == "."]
-      break;
-    return modules
 
   @staticmethod
   def findRelatedInstalledModules(value, interpreter, project_path):
     if not value:
       return []
 
-    installed_modules = SimpleImport.findAllModules(interpreter, project_path)
+    installed_modules = interpreter.findAllModules(project_path)
     value = interpreter.normalizeValue(value)
     arr = [ module for module in installed_modules if interpreter.normalizeValue(module) == value ]
     arr.sort()
@@ -80,7 +65,7 @@ class SimpleImport:
 
   @staticmethod
   def isInstalledModule(value, interpreter, project_path):
-    return value in SimpleImport.findAllModules(interpreter, project_path)
+    return value in interpreter.findAllModules(project_path)
 
   @staticmethod
   def findByValue(interpreter, project_path, filename_query=None, containing_query=None, exclude_file=None):

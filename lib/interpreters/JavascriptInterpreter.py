@@ -1,4 +1,4 @@
-import re
+import re, json
 from sublime import Region
 from os import path
 from ..utils import joinStr
@@ -275,5 +275,27 @@ class JavascriptInterpreter(Interpreter):
         if interpreted.simport.expression == key:
           options['files'].append(self.settings['dictionary'][key])
     return options
+
+  def findAllModules(self, project_path):
+    modules = []
+    if path.isfile(path.join(project_path, 'package.json')):
+      with open(path.join(project_path, 'package.json')) as raw_json:
+        try:
+          packageJson = json.load(raw_json)
+          for key in [
+            "dependencies",
+            "devDependencies",
+            "peerDependencies",
+            "optionalDependencies"
+          ]:
+            if key in packageJson:
+              modules += packageJson[key].keys()
+
+        except ValueError:
+          SimpleImport.log_error("Failed to load package.json at {0}".format(
+            self.project_path
+          ))
+
+    return modules
 
 

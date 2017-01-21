@@ -150,3 +150,6 @@ class Interpreter:
   def parseOptions(self, interpreted, options):
     return options
 
+  def findAllModules(self, project_path):
+    return []
+
