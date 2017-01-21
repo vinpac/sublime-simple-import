@@ -1,4 +1,4 @@
-Simple Import v1.0.0
+Simple Import v1.0.2
 ====================
 
 [![Join the chat at https://gitter.im/sublime-simple-import/Lobby](https://badges.gitter.im/sublime-simple-import/Lobby.svg)](https://gitter.im/sublime-simple-import/Lobby?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
@@ -71,6 +71,8 @@ Settings
 **extra_extensions**  (Array) : Extensions of files to match and import as `url(<path>)`. Default: `[".jpg", ".png", ".gif", ".svg"]`
 
 **ignore**  (Array) : Paths to be ignored when crawling for modules.
+
+**single_quotes**  (Array) : Use single quotes instead of double. Default: `false`
 
 ### Python
 

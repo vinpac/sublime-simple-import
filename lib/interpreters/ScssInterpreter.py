@@ -33,7 +33,7 @@ class ScssInterpreter(Interpreter):
     if handler_name == "file":
       return "url({0})".format(statements["module"])
 
-    if self.getSetting("single-quotes"):
+    if self.getSetting("single_quotes"):
       return "@import \'{0}\';".format(statements["module"])
 
     return "@import \"{0}\";".format(statements["module"])
