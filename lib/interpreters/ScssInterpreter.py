@@ -33,6 +33,9 @@ class ScssInterpreter(Interpreter):
     if handler_name == "file":
       return "url({0})".format(statements["module"])
 
+    if self.getSetting("single-quotes"):
+      return "@import \'{0}\';".format(statements["module"])
+
     return "@import \"{0}\";".format(statements["module"])
 
   def getQueryObject(self, interpreted):
