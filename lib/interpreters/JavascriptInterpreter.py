@@ -137,6 +137,9 @@ class JavascriptInterpreter(Interpreter):
     elif mode == SIMode.PANEL_MODE:
       if option_key != "modules":
         statements['variable'] = path.basename(value)
+      else:
+        statements['variable'] = value
+
       statements['variable'] = self.parseVariableKey(self.removeExtensions(statements['variable']))
 
     statements['module'] = self.parseModuleKey(value)
