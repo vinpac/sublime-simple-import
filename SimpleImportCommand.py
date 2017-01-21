@@ -221,6 +221,7 @@ class SimpleImportCommand(sublime_plugin.TextCommand):
 
   def loadSettings(self):
     settings = {}
+
     view_settings = self.view.settings().get("simple-import")
     if view_settings and self.interpreter.syntax in view_settings:
       settings.update(view_settings[self.interpreter.syntax])
@@ -233,6 +234,16 @@ class SimpleImportCommand(sublime_plugin.TextCommand):
     # so settings won't stick through different evironments
     obj = self.interpreter.settings.copy()
     obj.update(settings)
+
+    rulers = self.view.settings().get("rulers") or []
+
+    # Find the smallest ruler
+    for x in rulers:
+      if 'ruler' in obj:
+        if x < obj['ruler']:
+          obj['ruler'] = x
+      else:
+        obj['ruler'] = x
 
     self.interpreter.setSettings(obj)
 

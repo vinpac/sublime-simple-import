@@ -176,6 +176,7 @@ class JavascriptInterpreter(Interpreter):
     return super().onInterprete(interpreted)
 
   def stringifyStatements(self, statements, handler_name=None, insert_type=Interpreted.IT_REPLACE):
+    shouldAddSubmodules = False
     import_str = ''
 
     if handler_name.startswith('require'):
@@ -202,7 +203,10 @@ class JavascriptInterpreter(Interpreter):
         if 'submodules' in statements:
           if 'variable' in statements:
             import_str += ', '
-          import_str += "{{ {0} }}".format(", ".join(statements['submodules']))
+
+          shouldAddSubmodules = True
+          statements['submodules'].sort()
+          import_str += "{{{SI_SUBMODULES}}}"
 
         import_str += " from "
 
@@ -215,6 +219,19 @@ class JavascriptInterpreter(Interpreter):
       import_str = "\n" + import_str
     elif insert_type == Interpreted.IT_INSERT:
       import_str += "\n"
+
+    if shouldAddSubmodules:
+      import_str_with_subs = import_str.format(SI_SUBMODULES=" " + ", ".join(
+        statements['submodules']
+      ) + " ")
+
+      ruler = self.getSetting('ruler')
+      if ruler and len(import_str_with_subs) > ruler:
+        import_str = import_str.format(SI_SUBMODULES="\n\t" + ",\n\t".join(
+          statements['submodules']
+        ) + "\n")
+      else:
+        import_str = import_str_with_subs
 
     return import_str
 
