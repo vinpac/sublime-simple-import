@@ -38,7 +38,5 @@ class ScssInterpreter(Interpreter):
 
     return "@import \"{0}\";".format(statements["module"])
 
-  def getQueryObject(self, interpreted):
-    return {
-      "file": interpreted.statements["module"]
-    }
+  def getQueryValue(self, interpreted):
+    return interpreted.statements["module"]

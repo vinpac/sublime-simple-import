@@ -15,7 +15,6 @@
 		"lib/interpreter/Interpreter.py",
 		"lib/interpreter/Interpreted.py",
 		"lib/interpreter/Handler.py",
-		"lib/SimpleImport.py",
 		"lib/SIMode.py",
 		"SimpleImportCommand.py",
 		"ReloadPlugin.py"

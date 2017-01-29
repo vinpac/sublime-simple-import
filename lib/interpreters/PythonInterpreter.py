@@ -56,10 +56,6 @@ class PythonInterpreter(Interpreter):
   def parseVariableKey(self, value):
     return re.sub(r"!|@|\*", "", value)
 
-  def getQueryObject(self, interpreted):
-    return {
-      "file": interpreted.statements["module"]
-    }
 
   def onInterprete(self, interpreted, mode=SIMode.REPLACE_MODE):
     statements = interpreted.statements
@@ -84,8 +80,5 @@ class PythonInterpreter(Interpreter):
 
     return "from {0} import {1}".format(statements['module'], statements['variable'])
 
-  def parseBeforeInsert(self, interpreted, view_imports, mode=SIMode.REPLACE_MODE):
-    return interpreted
-
-  def getFileQueryRegex(self, filename):
+  def buildRegexForFiles(self, filename):
     return r"({0}|{0}\/__init__)({1})$".format(filename, "|".join(self.getSetting('extensions')))

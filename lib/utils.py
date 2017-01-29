@@ -18,3 +18,12 @@ def extract_suffix(suffixes, value):
 
 def endswith(suffixes, value):
   return extract_suffix(suffixes, value) != None
+
+def flattenObjectToList(obj):
+  result = []
+  for key in obj:
+    if isinstance(obj, dict):
+      result += flattenObjectToList(obj)
+    result.append(obj[key])
+  return result
+

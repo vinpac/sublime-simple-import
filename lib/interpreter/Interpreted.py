@@ -11,6 +11,12 @@ class Interpreted:
     self.handler_name = handler_name
     self.statements = statements
     self.insert_type = Interpreted.IT_REPLACE
+    self.removed = False
+
+  def remove(self):
+    self.removed = True
 
   def __str__(self):
+    if self.removed:
+      return ''
     return self.interpreter.stringifyStatements(self.statements, handler_name=self.handler_name, insert_type=self.insert_type)

@@ -1,6 +1,6 @@
 import re
 from sublime import Region
-from os import path
+from os import path, walk
 from ..utils import joinStr, ucfirst
 from .Interpreted import Interpreted
 from ..utils import endswith
@@ -108,13 +108,13 @@ class Interpreter:
   def parseBeforeInsert(self, interpreted, view_imports, mode=SIMode.REPLACE_MODE):
     return interpreted
 
-  def getFileMatcher(self, value):
+  def buildRegexForFiles(self, value):
     return r"({0}|{1})(\/index)?({2})$".format(
       value,
       self.normalizeValue(value),
       "|".join(self.getSetting('extensions', [])))
 
-  def getExtraFilesMatcher(self, value):
+  def buildRegexForExtraFiles(self, value):
     return r"({0}|{1})({2})$".format(
       value,
       self.normalizeValue(value),
@@ -135,10 +135,13 @@ class Interpreter:
       extensions = self.getSetting('extensions' if not is_extra else 'extra_extensions', [])
 
       extension = extract_suffix(extensions, filename)
+
       if not extension:
         return False
 
-      normalizedValued = self.normalizeValue(path.join(dirpath, filename[:len(extension) * -1]))
+      normalizedValued = self.normalizeValue(
+        path.join(dirpath, filename[:len(extension) * -1])
+      )
       return re.search(regex, "{0}{1}".format(normalizedValued, extension), re.IGNORECASE)
     return re.search(regex, filename, re.IGNORECASE)
 
@@ -147,9 +150,71 @@ class Interpreter:
       if handler.name == handlerName:
         return handler
 
-  def parseOptions(self, interpreted, options):
-    return options
+  def getQueryValue(self, interpreted):
+    return False
 
   def findAllModules(self, project_path):
     return []
+
+  def findByValue(self, value, project_path, omit_files=None):
+    result = {}
+    regex_for_files = self.buildRegexForFiles(value)
+    regex_for_extra_files = self.buildRegexForExtraFiles(value)
+    ignored_paths = [
+      path.normpath(epath)
+      for epath in self.getSetting("ignore", [])
+    ]
+
+
+    for dirpath, dirnames, filenames in walk(project_path, topdown=True):
+      relative_dir = path.relpath(dirpath, project_path)
+      # Change excluding folders
+      dirnames[:] = [dirname for dirname in dirnames if path.normpath(path.join(relative_dir, dirname)) not in ignored_paths]
+      for filename in filenames:
+        if omit_files and path.join(relative_dir, filename) in omit_files:
+          continue
+
+        # Find files with name equal the value
+        if self.matchFilePathWithRegex(
+          filename, regex_for_files, dirpath=relative_dir
+        ):
+          if "files" not in result:
+            result["files"] = []
+
+          result["files"].append(path.join(relative_dir, filename))
+        elif self.matchFilePathWithRegex(
+          filename, regex_for_extra_files, dirpath=relative_dir, is_extra=True
+        ):
+          if "extra_files" not in result:
+            result["extra_files"] = []
+
+          result["extra_files"].append(path.join(relative_dir, filename))
+          pass
+
+    return result
+
+  def parsePath(self, path):
+    if path[:2] == "./" or path[:3] == "../":
+      return path
+    else:
+      return "./" + path
+
+  def parseOptions(self, interpreted, options):
+    return options
+
+  def parseOptionItem(self, option, view_relpath):
+    if not option:
+      return option
+
+    # Make every path relative to view file
+    if option["key"] not in ["modules", "module_exports", "module_files"]:
+      option["value"] = self.parsePath(
+        path.normpath(
+          path.relpath(
+            option["value"],
+            view_relpath
+          )
+        )
+      )
+    return option
 

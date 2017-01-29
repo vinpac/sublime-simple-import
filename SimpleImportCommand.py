@@ -1,12 +1,33 @@
 import sublime, sublime_plugin, re, json
 from os import path
+from .lib.interpreters import *
 from .lib.interpreter.SImport import SImport
 from .lib.interpreter.Interpreted import Interpreted
 from .lib.interpreter.PendingImport import PendingImport
-from .lib.SimpleImport import SimpleImport
+from .lib.interpreters import __all__ as InterpretersNames
 from .lib.SIMode import SIMode
 
 class SimpleImportCommand(sublime_plugin.TextCommand):
+  SETTINGS_FILE = ".simple-import.json"
+  interpreters = {}
+
+  @staticmethod
+  def loadInterpreters():
+    interpreter_regex = r"Interpreter$"
+    for name in InterpretersNames:
+      obj = globals()[name]()
+      SimpleImportCommand.interpreters[obj.syntax] = obj
+
+  @staticmethod
+  def getInterpreter(view_syntax, view_filename):
+    for key in SimpleImportCommand.interpreters:
+      if SimpleImportCommand.interpreters[key].isCompatibleView(
+        view_filename,
+        view_syntax
+      ):
+        return SimpleImportCommand.interpreters[key]
+
+    return None
 
   def run(self, edit, push_mode=False, panel_mode=False):
     # modes
@@ -24,10 +45,8 @@ class SimpleImportCommand(sublime_plugin.TextCommand):
     self.view_relpath = path.join(self.view_dir_relpath, self.view_filename)
     view_syntax = path.basename(self.view.settings().get('syntax')).lower()
 
-    self.interpreter = SimpleImport.getInterpreter(
-      # Selected syntax
+    self.interpreter = SimpleImportCommand.getInterpreter(
       view_syntax,
-      # Filename
       self.view_filename
     )
 
@@ -77,20 +96,19 @@ class SimpleImportCommand(sublime_plugin.TextCommand):
         )
 
         self.view.window().show_quick_panel(
-          pending_import.getOptionsArr(),
+          pending_import.getOptionsAsList(),
           self.onOptionSelected
         )
       else:
-        query = self.interpreter.getQueryObject(interpreted)
+        queryValue = self.interpreter.getQueryValue(interpreted)
 
-        if query != False:
+        if queryValue != False:
           pending_import = PendingImport(
             interpreted,
-            SimpleImport.query(
-              query,
-              self.interpreter,
+            self.interpreter.findByValue(
+              queryValue,
               self.project_path,
-              exclude=path.join(self.view_relpath)
+              omit_files=[path.join(self.view_relpath)]
             )
           )
 
@@ -100,30 +118,25 @@ class SimpleImportCommand(sublime_plugin.TextCommand):
         return
 
     for pending_import in self.pending_imports:
-      options_arr = pending_import.getOptionsArr(include_keys=True)
+      options_arr = pending_import.getOptionsAsList(include_keys=True)
 
       if len(options_arr) > 1:
         self.view.show_popup_menu(options_arr, self.onOptionSelected)
       else:
-        self.onOptionSelected(len(options_arr) - 1)
+        self.onOptionSelected(0)
 
   def onOptionSelected(self, index):
     for pending_import in self.pending_imports:
       if not pending_import.resolved:
         pending_import.resolved = True
         if index != -1:
-          option_obj = pending_import.getOptionByIndex(index)
+          option_obj = self.interpreter.parseOptionItem(
+            pending_import.getOptionByIndex(index),
+            self.view_dir_relpath
+          )
 
-          # Make every path relative to view file
-          if option_obj["key"] != "modules":
-            option_obj["value"] = self.parsePath(
-              path.normpath(
-                path.relpath(
-                  option_obj["value"],
-                  self.view_dir_relpath
-                )
-              )
-            )
+          if not option_obj:
+            break
 
           self.interpreter.onSearchResultChosen(
             pending_import.interpreted,
@@ -131,6 +144,10 @@ class SimpleImportCommand(sublime_plugin.TextCommand):
             option_obj['value'],
             mode=self.mode
           )
+        else:
+          self.pending_imports.remove(pending_import)
+          self.interpreted_list.remove(pending_import.interpreted)
+
         break
 
     if False not in [ pending.resolved for pending in self.pending_imports ]:
@@ -138,14 +155,18 @@ class SimpleImportCommand(sublime_plugin.TextCommand):
 
   def onPendingImportsResolved(self):
     for interpreted in self.interpreted_list:
-      resolved_interpreted = self.interpreter.parseBeforeInsert(
+      resolved = self.interpreter.parseBeforeInsert(
         interpreted,
         self.view_imports,
         mode=self.mode
       )
 
-      if resolved_interpreted not in self.imports_to_insert:
-        self.imports_to_insert.append(resolved_interpreted)
+      if isinstance(resolved, list):
+        for vimport in resolved:
+          if vimport not in self.imports_to_insert:
+            self.imports_to_insert.append(vimport)
+      elif resolved not in self.imports_to_insert:
+        self.imports_to_insert.append(resolved)
 
     for interpreted in self.imports_to_insert:
       self.handleInsertion(interpreted)
@@ -162,18 +183,11 @@ class SimpleImportCommand(sublime_plugin.TextCommand):
         "end": interpreted.simport.region.end()
       })
 
-  def parsePath(self, path):
-    if path[:2] == "./" or path[:3] == "../":
-      return path
-    else:
-      return "./" + path
-
   def findAllImports(self):
     if not self.interpreter.find_imports_regex:
       return []
 
     regions = self.view.find_all(self.interpreter.find_imports_regex)
-
     return [
       self.interpreter.interprete(
         SImport(
@@ -198,8 +212,10 @@ class SimpleImportCommand(sublime_plugin.TextCommand):
     return folders[0]
 
   def getProjectSettings(self):
-    if path.isfile(path.join(self.project_path, SimpleImport.SETTINGS_FILE)):
-      with open(path.join(self.project_path, SimpleImport.SETTINGS_FILE)) as raw_json:
+    SETTINGS_FILE = SimpleImportCommand.SETTINGS_FILE
+
+    if path.isfile(path.join(self.project_path, SETTINGS_FILE)):
+      with open(path.join(self.project_path, SETTINGS_FILE)) as raw_json:
         try:
           settings_json = json.load(raw_json)
           if self.interpreter.syntax in settings_json:
@@ -217,7 +233,7 @@ class SimpleImportCommand(sublime_plugin.TextCommand):
             else:
               return settings_json[self.interpreter.syntax]
         except ValueError:
-          SimpleImport.log_error("Failed to load .simple-import.json at {0}".format(self.project_path))
+          print("Failed to load .simple-import.json at {0}".format(self.project_path))
 
   def loadSettings(self):
     settings = {}
@@ -257,4 +273,4 @@ class InsertAtCommand(sublime_plugin.TextCommand):
   def run(self, edit, characters, start=0):
     self.view.insert(edit, start, characters)
 
-SimpleImport.loadInterpreters()
+SimpleImportCommand.loadInterpreters()
