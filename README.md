@@ -28,7 +28,19 @@ import { SHOW_ALL } from '../actions/visibilityActions'
 import { SHOW_ALL, SHOW_COMPLETED } from '../actions/visibilityActions'
 
 // visibilityActions *Ctrl+Alt+J*
-import visibilityActions, { SHOW_ALL, SHOW_COMPLETED } from '../actions/visibilityActions'
+import visibilityActions, {
+    SHOW_ALL,
+    SHOW_COMPLETED,
+} from '../actions/visibilityActions'
+// It also breaks your imports by the smallest rule
+
+// Simple Import looks into your package.json and find files and variables inside your dependencies's folders
+// For example
+// connect *Ctrl+Alt+J*
+import { connect } from 'redux';
+
+// combineReducers *Ctrl+Alt+J*
+import { connect, combineReducers } from 'redux';
 
 // req react *Ctrl+Alt+J*
 const react = require("react")
