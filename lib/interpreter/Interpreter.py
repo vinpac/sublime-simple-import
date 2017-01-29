@@ -61,8 +61,8 @@ class Interpreter:
       if callable(fn):
         statements[key] = fn(statements[key])
 
-  def getSetting(self, key, otherwise=None):
-    return self.__settings[key] if key in self.__settings else otherwise
+  def getSetting(self, key, default=None):
+    return self.__settings[key] if key in self.__settings else default
 
   def setSettings(self, settings):
     self.__settings = settings
@@ -151,6 +151,8 @@ class Interpreter:
         return handler
 
   def getQueryValue(self, interpreted):
+    if 'module' in interpreted.statements:
+      return interpreted.statements['module']
     return False
 
   def findAllModules(self, project_path):

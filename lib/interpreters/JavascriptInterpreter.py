@@ -132,9 +132,6 @@ class JavascriptInterpreter(Interpreter):
   def parseVariableKey(self, value):
     return joinStr(re.sub(r"!|@|\*", "", value), r"\/|-|\.")
 
-  def getQueryValue(self, interpreted):
-    return interpreted.statements["module"]
-
   def onSearchResultChosen(self, interpreted, option_key, value, mode=SIMode.REPLACE_MODE):
     statements = interpreted.statements
     if ((mode == SIMode.PANEL_MODE and len(statements['variable'])) or
@@ -479,6 +476,7 @@ class JavascriptInterpreter(Interpreter):
     return result
 
   def findInCachedModules(self, value, project_path, defaultResult={}):
+    omitList = self.getSetting("omit", [])
     regex_for_modules = self.buildRegexForModule(value)
     regex_for_files = self.buildRegexForFiles(value)
     regex_for_extra_files = self.buildRegexForExtraFiles(value)
@@ -506,7 +504,8 @@ class JavascriptInterpreter(Interpreter):
         if moduleName not in result["module_exports"]:
           result["module_exports"][moduleName] = []
 
-        result["module_exports"][moduleName].append(value)
+        if "{0}.{1}".format(moduleName, value) not in omitList:
+          result["module_exports"][moduleName].append(value)
 
       if 'files' in module:
         for filename in module['files']:
@@ -516,7 +515,11 @@ class JavascriptInterpreter(Interpreter):
             if "module_files" not in result:
               result["module_files"] = []
 
-            result["module_files"].append(path.join(moduleName, filename))
+            file_path = path.join(moduleName, filename)
+            if file_path in omitList:
+              continue
+
+            result["module_files"].append(file_path)
 
       if 'extra_files' in module:
         for filename in module['extra_files']:

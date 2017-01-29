@@ -1,4 +1,4 @@
-Simple Import v1.0.2
+Simple Import v1.1.0
 ====================
 
 [![Join the chat at https://gitter.im/sublime-simple-import/Lobby](https://badges.gitter.im/sublime-simple-import/Lobby.svg)](https://gitter.im/sublime-simple-import/Lobby?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
@@ -57,6 +57,25 @@ Settings
 **extra_extensions**  (Array) : Extensions to match, but SI will not look into these files for submodules. Default: `[".png", ".jpg", ".jpeg", ".svg", ".json", ".gif", ".css", ".scss", ".less"]`
 
 **ignore**  (Array) : Paths to be ignored when crawling for modules.
+
+**omit**  (Array) : Omited values. Default: `[]`
+    Example: `["react-redux.connect"]` ignores `connect`  that `react-redux` exports.
+
+**dictionary** (Object) : Map of module values. For values that won't be found by default, like `immutable` module. Example:
+
+```
+"dictionary": {
+  "modules": {
+    "immutable": [
+      "Map",
+      "Set",
+      "Stack",
+      "List",
+      "Stack"
+    ]
+  }
+}
+```
 
 **require_by_default**  (Boolean) : Prefer `require` than `import`. Default: `False`
 

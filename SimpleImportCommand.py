@@ -84,7 +84,7 @@ class SimpleImportCommand(sublime_plugin.TextCommand):
 
       interpreted = self.interpreter.interprete(simport, mode=self.mode)
       self.interpreted_list.append(interpreted)
-
+      pending_import = None
 
       if self.isPanelMode():
         pending_import = PendingImport(
@@ -112,7 +112,8 @@ class SimpleImportCommand(sublime_plugin.TextCommand):
             )
           )
 
-      self.pending_imports.append(pending_import)
+      if pending_import:
+        self.pending_imports.append(pending_import)
 
       if self.isPanelMode():
         return
