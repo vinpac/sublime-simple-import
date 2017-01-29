@@ -316,10 +316,9 @@ class JavascriptInterpreter(Interpreter):
       interpreted.insert_type = Interpreted.IT_INSERT
 
       if len(view_imports):
-        for vimport in reversed(view_imports):
-          if vimport.removed:
-            continue
+        lastImport = view_imports[-1]
 
+        if lastImport:
           context_region = vimport.simport.context_region
           if vimport in modifiedImports:
             # New length minus initial length
@@ -334,10 +333,12 @@ class JavascriptInterpreter(Interpreter):
             region_begin = context_region.end()
             region_end = region_begin
 
-          interpreted.insert_type = Interpreted.IT_INSERT_AFTER
-          interpreted.simport.region = Region(region_begin, region_end)
+          if vimport.removed:
+            interpreted.insert_type = Interpreted.IT_REPLACE
+          else:
+            interpreted.insert_type = Interpreted.IT_INSERT_AFTER
 
-          break
+          interpreted.simport.region = Region(region_begin, region_end)
 
     if shouldAppendInterpreted:
       modifiedImports.append(interpreted)
