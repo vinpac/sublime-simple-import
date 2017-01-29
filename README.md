@@ -72,7 +72,7 @@ Settings
 
 **ignore**  (Array) : Paths to be ignored when crawling for modules.
 
-**single_quotes**  (Array) : Use single quotes instead of double. Default: `false`
+**single_quotes**  (Boolean) : Use single quotes instead of double. Default: `false`
 
 ### Python
 
