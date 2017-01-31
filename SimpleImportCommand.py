@@ -51,7 +51,7 @@ class SimpleImportCommand(sublime_plugin.TextCommand):
     )
 
     if not self.interpreter:
-      SimpleImport.log_error("Simple import does not support '.{0}' syntax yet".format(view_syntax))
+      print("Simple import does not support '.{0}' syntax yet".format(view_syntax))
       return
 
     self.loadSettings()
@@ -89,9 +89,10 @@ class SimpleImportCommand(sublime_plugin.TextCommand):
       if self.isPanelMode():
         pending_import = PendingImport(
           interpreted,
-          SimpleImport.findAll(
-            self.interpreter,
-            self.project_path
+          self.interpreter.findByValue(
+            '',
+            self.project_path,
+            omit_files=[path.join(self.view_relpath)]
           )
         )
 

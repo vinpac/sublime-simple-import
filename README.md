@@ -1,4 +1,4 @@
-Simple Import v1.1.0
+Simple Import v1.1.1
 ====================
 
 [![Join the chat at https://gitter.im/sublime-simple-import/Lobby](https://badges.gitter.im/sublime-simple-import/Lobby.svg)](https://gitter.im/sublime-simple-import/Lobby?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
@@ -58,10 +58,25 @@ You can find this plugin in Packages Control by the name of "Simple Import". You
 	 - or Download this repository as `rar` and put the content inside the packages folder
 
 
-Settings
---------
-
 ### Javascript
+
+Javascript, by default, will add suffix to decorators. For Example `@autobind` becomes `Import autobind from 'autobind-decorator';`. It can also look into your dependencies for exported values and even find submodules if the modules exports an object. For example in `draft-js`.
+
+```
+var DraftPublic = {
+  Editor: DraftEditor,
+  // ...
+};
+
+module.exports = DraftPublic;
+```
+
+SI will look into this file and understand it exports an object with the key `Editor`. So, if you try to import Editor in your project. SI will add (or give the option) `import { Editor } from 'draft-js'`.
+
+Don't worry, it's all cached after the first usage by module version so, if you update your modules, SI will update this module's cached submodules and files.
+
+
+#### Settings 
 
 **extensions**  (Array) : Extensions to match. Default: `[".js", ".jsx"]`
 
@@ -79,6 +94,9 @@ Settings
 ```
 "dictionary": {
   "modules": {
+    "cx": "classnames"
+  },
+  "modules_exports": {
     "immutable": [
       "Map",
       "Set",
@@ -98,6 +116,10 @@ Settings
 
 ### SCSS
 
+Currently, it finds your `.scss` files and imports them.
+
+#### Settings
+
 **extensions**  (Array) : Extensions to match. Default: `[".scss"]`
 
 **extra_extensions**  (Array) : Extensions of files to match and import as `url(<path>)`. Default: `[".jpg", ".png", ".gif", ".svg"]`
@@ -107,6 +129,8 @@ Settings
 **single_quotes**  (Boolean) : Use single quotes instead of double. Default: `false`
 
 ### Python
+
+#### Settings 
 
 **extensions**  (Array) : Extensions to match. Default: `[".py"]`
 

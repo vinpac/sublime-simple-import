@@ -16,6 +16,12 @@ def extract_suffix(suffixes, value):
       return suffix
   return None
 
+def extract_prefix(prefixes, value):
+  for prefix in prefixes:
+    if value.startswith(prefix):
+      return prefix
+  return None
+
 def endswith(suffixes, value):
   return extract_suffix(suffixes, value) != None
 

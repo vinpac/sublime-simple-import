@@ -1,7 +1,7 @@
 import re, json
 from sublime import Region
 from os import path, walk
-from ..utils import joinStr, endswith
+from ..utils import joinStr, endswith, extract_prefix
 from ..interpreter import *
 from ..SIMode import SIMode
 
@@ -12,7 +12,7 @@ class JavascriptInterpreter(Interpreter):
   def run(self):
 
     self.find_imports_regex = r"(import[\s\n]+((?:(?!from|;)[\s\S])*)[\s\n]+from[\s]+[\"\']([^\"\']+)[\"\'](;?))"
-    self.find_exports_regex = r"(export\s+(const|let|var|function|class)\s+(?P<value>[\w]+)|exports\.(?P<value2>[\w]+)\s*=)"
+    self.find_exports_regex = r"(export\s+(?:const|let|var|function|class)\s+(?P<value>[\w]+)|exports\.(?P<value2>[\w]+)\s*=|module.exports\s*=\s*(?P<value3>[\w]+))"
 
     keys = {
       "variable": "[^\s]+",
@@ -22,6 +22,7 @@ class JavascriptInterpreter(Interpreter):
     }
 
     self.settings = {
+      "add_decorator_suffix": True,
       "extensions": [".js", ".jsx"],
       "remove_extensions": [".js"],
       "extra_extensions": [".png", ".jpg", ".jpeg", ".svg", ".json", ".gif", ".css", ".scss", ".less"],
@@ -105,6 +106,11 @@ class JavascriptInterpreter(Interpreter):
 
 
   def parseModuleKey(self, value):
+    if self.getSetting("add_decorator_suffix"):
+      # Add decorator suffix
+      if value.startswith("@") and "/" not in value:
+        value = value[1:] + "-decorator"
+
     #remove extensions
     for ext in self.getSetting('remove_extensions'):
       if value.endswith(ext):
@@ -342,33 +348,28 @@ class JavascriptInterpreter(Interpreter):
 
     return modifiedImports
 
-  def getDictionary(self):
-    obj = {}
-    dictionary = self.settings['dictionary']
-    if dictionary:
-      for key in obj:
-        obj = { "variable": key, "module": obj[key] }
-    return obj
-
   def findAllModules(self, project_path):
     modules = []
     if path.isfile(path.join(project_path, 'package.json')):
-      with open(path.join(project_path, 'package.json')) as raw_json:
-        try:
-          packageJson = json.load(raw_json)
-          for key in [
-            "dependencies",
-            "devDependencies",
-            "peerDependencies",
-            "optionalDependencies"
-          ]:
-            if key in packageJson:
-              modules += packageJson[key].keys()
+      packageJsonFile = open(path.join(project_path, 'package.json'))
+      try:
+        packageJson = json.load(packageJsonFile)
+        for key in [
+          "dependencies",
+          "devDependencies",
+          "peerDependencies",
+          "optionalDependencies"
+        ]:
+          if key in packageJson:
+            modules += packageJson[key].keys()
 
-        except ValueError:
-          SimpleImport.log_error("Failed to load package.json at {0}".format(
-            self.project_path
-          ))
+      except ValueError:
+        SimpleImport.log_error("Failed to load package.json at {0}".format(
+          self.project_path
+        ))
+
+      # Close file
+      packageJsonFile.close()
 
     return modules
 
@@ -383,18 +384,25 @@ class JavascriptInterpreter(Interpreter):
     if not dictionary:
       return result
 
-    # Find modules containing value
-    if "modules" in dictionary:
-      for module in dictionary["modules"]:
-        if value in dictionary["modules"][module]:
-          if "module_exports" not in result:
-            result["module_exports"] = {}
+    for key in ["modules", "files"]:
+      if key in dictionary:
+        if value in dictionary[key]:
+          if key not in result:
+            result[key] = []
+          result[key].append(dictionary[key][value])
 
-          if module not in result["module_exports"]:
-            result["module_exports"][module] = []
+    for key in ["module_exports", "file_exports"]:
+      if key in dictionary:
+        for moduleName in dictionary[key]:
+          if value in dictionary[key][moduleName]:
+            if key not in result:
+              result[key] = {}
 
-          if value not in result["module_exports"][module]:
-            result["module_exports"][module].append(value)
+            if moduleName not in result[key]:
+              result[key][moduleName] = []
+
+            if value not in result[key][moduleName]:
+              result[key][moduleName].append(value)
 
     return result
 
@@ -450,13 +458,19 @@ class JavascriptInterpreter(Interpreter):
         # Find files that export the value
         if self.isValidFile(filename):
           try:
+            file = open(path.join(dirpath, filename))
             matches = re.findall(
               self.find_exports_regex,
-              open(path.join(dirpath, filename)).read()
+              file.read()
             )
+            # close file
+            file.close()
 
             for match in matches:
-              match_value = match[2] if match[2] else match[3]
+              match_value = match[1] if match[1] else match[2]
+
+              if not match_value:
+                continue
 
               if match_value == value:
                 file_path = path.join(relative_dir, filename)
@@ -540,6 +554,7 @@ class JavascriptInterpreter(Interpreter):
     )
     cachedModules = JavascriptInterpreter.cachedModules
     modules = self.findAllModules(project_path)
+    settings = self.getSetting('cache', {})
 
     for moduleName in modules:
       isCached = False
@@ -580,24 +595,56 @@ class JavascriptInterpreter(Interpreter):
                 exists = path.isfile(main_file_path)
 
               if exists:
+                module_file = open(main_file_path)
+                module_file_body = module_file.read()
+                module_file.close()
+
                 matches = re.findall(
                   self.find_exports_regex,
-                  open(main_file_path).read()
+                  module_file_body
                 )
+                exported_main = None
 
                 for match in matches:
-                  match_value = match[2] if match[2] else match[3]
-                  if match_value:
+                  match_value = match[1] if match[1] else match[2]
+
+                  if not match_value:
+                    if match[3]:
+                      exported_main = match[3]
+
+                  if match_value and match_value != 'default':
                     if "exports" not in cachedModules[moduleName]:
                       cachedModules[moduleName]["exports"] = []
 
                     cachedModules[moduleName]["exports"].append(match_value)
 
+                if not "exports" in cachedModules[moduleName]:
+                  cachedModules[moduleName]["exports"] = (
+                    self.extractSubmodulesFromObjectInBody(
+                      module_file_body,
+                      exported_main,
+                      useDefault=(not exported_main)
+                    )
+                  )
+
+
           except FileNotFoundError:
             print('Error')
 
       if not isCached:
+        include = []
+
+        if moduleName in settings:
+          if "include" in settings[moduleName]:
+            include = settings[moduleName]["include"]
+
         for dirpath, dirnames, filenames in walk(module_path, topdown=True):
+          reldir = path.relpath(dirpath, module_path)
+          dirnames[:] = [
+            dirname for dirname in dirnames
+              if path.normpath(path.join(reldir, dirname)) in include
+          ]
+
           for filename in filenames:
             # Find files with name equal the value
             if endswith(self.getSetting('extensions'), filename):
@@ -613,4 +660,61 @@ class JavascriptInterpreter(Interpreter):
                 cachedModules[moduleName]["extra_files"] = []
 
               cachedModules[moduleName]["extra_files"].append(filename)
-          break
+
+  def extractSubmodulesFromObjectInBody(self, body, variableName, useDefault=False):
+    submodules = []
+
+    match = re.compile(
+      "{0}\s*=\s*".format(variableName)
+        if not useDefault else "export\s+default\s+"
+    ).search(body)
+
+    if match:
+      start = match.end()
+
+      # if it's not an object return
+      if body[start] != "{":
+        return submodules
+
+
+      end = len(body)
+      pos = start + 1
+      bracketsCount = 1
+
+      while(pos < end):
+        if body[pos] == "{":
+          bracketsCount += 1
+
+        if body[pos] == "}":
+          bracketsCount -= 1
+
+        if bracketsCount == 0:
+          end = pos + 1
+
+        pos += 1
+
+      # Remove every inner object to make it easier
+      body = re.sub(r"\{([^\{]+)\}|\[([^\[]+)\]|\(([^\(]+)\)", '', body[start+1:end-1])
+      strings = re.finditer(r"(\"([^\"\n]+)\"|\'([^\'\n]+)\'|\`([^\`]+)\`)", body)
+      removed_len = 0
+      # Remove all strings that contain a comma
+      for match in strings:
+        if "," in match.group(0):
+          body = (
+            body[0:match.start()-removed_len] + body[match.end()-removed_len:]
+          )
+          removed_len += match.end() - match.start()
+
+      splited = body.split(',')
+      for text in splited:
+        indexOfSeparator = text.find(':')
+        if indexOfSeparator:
+          key = text[:indexOfSeparator].strip()
+          if key:
+            quote = extract_prefix(["\"","'"], key)
+            if not quote and not " " in key:
+              submodules.append(key)
+            elif key[-1] == quote:
+              submodules.append(key[1:-1])
+
+    return submodules

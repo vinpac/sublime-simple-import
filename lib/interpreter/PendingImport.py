@@ -46,7 +46,7 @@ class PendingImport:
       options
     )
 
-  def getOptionsAsList(self, include_keys):
+  def getOptionsAsList(self, include_keys=True):
     return PendingImport.parseQueryResultToList(
       self.options,
       include_keys=include_keys
