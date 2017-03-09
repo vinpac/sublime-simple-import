@@ -13,6 +13,7 @@ class JavascriptInterpreter(Interpreter):
 
     self.find_imports_regex = r"(import[\s\n]+((?:(?!from|;)[\s\S])*)[\s\n]+from[\s]+[\"\']([^\"\']+)[\"\'](;?))"
     self.find_exports_regex = r"(export\s+(?:const|let|var|function|class)\s+(?P<value>[\w]+)|exports\.(?P<value2>[\w]+)\s*=|module.exports\s*=\s*(?P<value3>[\w]+))"
+    self.find_exports_list_regex = r"export\s+(\{[^\}]+\})"
 
     keys = {
       "variable": "[^\s]+",
@@ -459,11 +460,17 @@ class JavascriptInterpreter(Interpreter):
         if self.isValidFile(filename):
           try:
             file = open(path.join(dirpath, filename))
-            matches = re.findall(
-              self.find_exports_regex,
-              file.read()
-            )
+            body = file.read()
+            matches = re.findall(self.find_exports_regex, body)
+
+            if not self.getSetting("es5"):
+              listMatches = re.findall(self.find_exports_list_regex, body)
+              if listMatches:
+                listMatches = listMatches[0][1:-1].split(',')
+                matches += [ [x.strip(), x.strip()] for x in listMatches ]
+
             # close file
+            del body
             file.close()
 
             for match in matches:
